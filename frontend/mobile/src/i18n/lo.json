@@ -1,0 +1,16 @@
+{
+  "app": { "name": "ເງິນຊາຍ", "tagline": "ສົ່ງເງິນໄປລາວ — ງ່າຍ, ໄວ, ປອດໄພ" },
+  "splash": { "title": "ຍິນດີຕ້ອນຮັບສູ່ NgoenSai", "subtitle": "ສົ່ງເງິນໄປລາວ — ງ່າຍ, ໄວ, ປອດໄພ", "lao": "ລາວ", "thai": "ไทย", "english": "English" },
+  "login": { "title": "ເຂົ້າສູ່ລະບົບ", "phonePlaceholder": "ເບີໂທລະສັບ", "sendOTP": "ສົ່ງ OTP", "countryCode": "ລະຫັດປະເທດ" },
+  "otp": { "title": "ຢືນຢັນ OTP", "subtitle": "ປ້ອນລະຫັດ 6 ຕົວເລກທີ່ສົ່ງໄປທີ່ {phone}", "resend": "ສົ່ງຄືນໃໝ່ໃນ {seconds} ວິນາທີ", "resendNow": "ສົ່ງຄືນ", "verify": "ຢືນຢັນ" },
+  "home": { "sendToLaos": "ສົ່ງເງິນໄປລາວ", "rate": "1 THB = {rate} LAK", "quickActions": "ສົ່ງດ່ວນ", "recentTransactions": "ລາຍການຫຼ້າສຸດ", "autosend": "ສົ່ງອັດຕະໂນມັດ: ຄັ້ງຕໍ່ໄປ {date} — {amount} THB", "viewAll": "ເບິ່ງທັງໝົດ", "noTransactions": "ຍັງບໍ່ມີລາຍການ" },
+  "amount": { "title": "ສົ່ງເງິນ", "enterAmount": "ປ້ອນຈຳນວນເງິນເປັນ THB", "suggested": "ຈຳນວນທີ່ແນະນຳ", "rateLocked": "ອັດຕາແລກປ່ຽນຖືກລັອກ 15 ນາທີ", "thb": "THB", "lak": "LAK", "next": "ຕໍ່ໄປ" },
+  "recipient": { "title": "ຜູ້ຮັບເງິນ", "saved": "ຜູ້ຮັບທີ່ບັນທຶກໄວ້", "newRecipient": "ຜູ້ຮັບໃໝ່", "name": "ຊື່ເຕັມ", "phone": "ເບີໂທລະສັບ", "province": "ແຂວງ", "relationship": "ຄວາມສໍາພັນ", "saveRecipient": "ບັນທຶກຜູ້ຮັບ", "select": "ເລືອກ" },
+  "payout": { "title": "ວິທີຮັບເງິນ", "recommended": "ແນະນຳ", "method": { "bcel_cash": "ຮັບເງິນສົດ BCEL", "seven_eleven_cash": "ຮັບທີ່ 7-Eleven", "agent_cash": "ຮັບຜ່ານຕົວແທນບ້ານ", "mobile_topup": "ເຕີມເງິນໂທລະສັບ", "bcel_wallet": "BCEL Wallet" }, "pickupTime": "{time} ນາທີ", "confirm": "ຢືນຢັນ" },
+  "confirm": { "title": "ຢືນຢັນ ແລະ ຊໍາລະ", "sending": "ສົ່ງ", "receiving": "ຮັບ", "rate": "ອັດຕາແລກປ່ຽນ", "midMarket": "ອັດຕາຕະຫຼາດ", "fee": "ຄ່າທຳນຽມ", "recipient": "ຜູ້ຮັບ", "payoutMethod": "ວິທີຮັບເງິນ", "payNow": "ຊໍາລະດຽວນີ້" },
+  "qr": { "title": "ສະແກນເພື່ອຊໍາລະ", "instructions": "ເປີດແອັບທະນາຄານ > ສະແກນ QR > ຢືນຢັນການຊໍາລະ", "paid": "ຂ້ອຍຊໍາລະແລ້ວ", "waiting": "ກຳລັງລໍຖ້າການຊໍາລະ...", "expiresIn": "ໝົດອາຍຸໃນ {time}", "amount": "ຈຳນວນເງິນ" },
+  "success": { "title": "ສົ່ງເງິນສຳເລັດ!", "subtitle": "ຜູ້ຮັບຈະໄດ້ຮັບເງິນໃນໄວໆນີ້", "share": "ແຊລະຫັດຜ່ານ LINE", "track": "ຕິດຕາມລາຍການ", "sendAgain": "ສົ່ງອີກຄັ້ງ", "done": "ສຳເລັດ" },
+  "transaction": { "title": "ລາຍລະອຽດລາຍການ", "ref": "ເລກທີລາຍການ", "sent": "ສົ່ງແລ້ວ", "paid": "ຊໍາລະແລ້ວ", "ready": "ພ້ອມຮັບເງິນ", "pickedUp": "ຮັບເງິນແລ້ວ", "pending": "ກຳລັງດຳເນີນການ", "shareReceipt": "ແຊຣໃບຮັບເງິນ", "sendAgain": "ສົ່ງອີກຄັ້ງ", "timeline": "ໄລຍະເວລາ" },
+  "profile": { "title": "ໂປຣໄຟລ", "name": "ຊື່", "phone": "ເບີໂທ", "kycLevel": "ລະດັບ KYC", "savedRecipients": "ຜູ້ຮັບທີ່ບັນທຶກໄວ້", "autosend": "ການສົ່ງອັດຕະໂນມັດ", "language": "ພາສາ", "rateAlerts": "ແຈ້ງເຕືອນອັດຕາ", "support": "ຊ່ວຍເຫຼືອ", "logout": "ອອກຈາກລະບົບ", "unverified": "ຍັງບໍ່ໄດ້ຢືນຢັນ" },
+  "common": { "save": "ບັນທຶກ", "cancel": "ຍົກເລີກ", "back": "ກັບ", "next": "ຕໍ່ໄປ", "confirm": "ຢືນຢັນ", "loading": "ກຳລັງໂຫຼດ...", "error": "ເກີດຂໍ້ຜິດພາດ", "retry": "ລອງໃໝ່", "ok": "ຕົກລົງ" }
+}

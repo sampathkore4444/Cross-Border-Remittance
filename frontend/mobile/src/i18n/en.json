@@ -1,0 +1,16 @@
+{
+  "app": { "name": "NgoenSai", "tagline": "Send money to Laos — easy, fast, safe" },
+  "splash": { "title": "Welcome to NgoenSai", "subtitle": "Send money to Laos — easy, fast, safe", "lao": "ລາວ", "thai": "ไทย", "english": "English" },
+  "login": { "title": "Sign In", "phonePlaceholder": "Phone number", "sendOTP": "Send OTP", "countryCode": "Country Code" },
+  "otp": { "title": "Verify OTP", "subtitle": "Enter the 6-digit code sent to {phone}", "resend": "Resend in {seconds}s", "resendNow": "Resend", "verify": "Verify" },
+  "home": { "sendToLaos": "Send to Laos", "rate": "1 THB = {rate} LAK", "quickActions": "Quick Send", "recentTransactions": "Recent Transactions", "autosend": "Auto-Send: Next {date} — {amount} THB", "viewAll": "View All", "noTransactions": "No transactions yet" },
+  "amount": { "title": "Send Money", "enterAmount": "Enter amount in THB", "suggested": "Suggested", "rateLocked": "Rate locked for 15 minutes", "thb": "THB", "lak": "LAK", "next": "Next" },
+  "recipient": { "title": "Recipient", "saved": "Saved Recipients", "newRecipient": "New Recipient", "name": "Full Name", "phone": "Phone Number", "province": "Province", "relationship": "Relationship", "saveRecipient": "Save Recipient", "select": "Select" },
+  "payout": { "title": "Payout Method", "recommended": "RECOMMENDED", "method": { "bcel_cash": "BCEL Cash Pickup", "seven_eleven_cash": "7-Eleven Pickup", "agent_cash": "Village Agent", "mobile_topup": "Mobile Top-Up", "bcel_wallet": "BCEL Wallet" }, "pickupTime": "{time} min", "confirm": "Confirm" },
+  "confirm": { "title": "Confirm & Pay", "sending": "Sending", "receiving": "Receiving", "rate": "Exchange Rate", "midMarket": "Mid-market", "fee": "Fee", "recipient": "Recipient", "payoutMethod": "Payout Method", "payNow": "Pay Now" },
+  "qr": { "title": "Scan to Pay", "instructions": "Open your bank app > Scan QR > Confirm payment", "paid": "I Have Paid", "waiting": "Waiting for payment...", "expiresIn": "Expires in {time}", "amount": "Amount" },
+  "success": { "title": "Money Sent!", "subtitle": "Your recipient will receive the money shortly", "share": "Share Code via LINE", "track": "Track Transaction", "sendAgain": "Send Again", "done": "Done" },
+  "transaction": { "title": "Transaction Detail", "ref": "Reference", "sent": "Sent", "paid": "Paid", "ready": "Ready for Pickup", "pickedUp": "Picked Up", "pending": "Pending", "shareReceipt": "Share Receipt", "sendAgain": "Send Again", "timeline": "Timeline" },
+  "profile": { "title": "Profile", "name": "Name", "phone": "Phone", "kycLevel": "KYC Level", "savedRecipients": "Saved Recipients", "autosend": "Auto-Send Settings", "language": "Language", "rateAlerts": "Rate Alerts", "support": "Support", "logout": "Log Out", "unverified": "Unverified" },
+  "common": { "save": "Save", "cancel": "Cancel", "back": "Back", "next": "Next", "confirm": "Confirm", "loading": "Loading...", "error": "Something went wrong", "retry": "Retry", "ok": "OK" }
+}

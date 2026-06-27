@@ -1,0 +1,89 @@
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { Colors } from '@constants/colors';
+import { Button } from '@components/Button';
+import { Input } from '@components/Input';
+import { Avatar } from '@components/Avatar';
+import { Card } from '@components/Card';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { SendStackParamList } from '@navigation/types';
+
+type Props = NativeStackScreenProps<SendStackParamList, 'Recipient'>;
+
+const SAVED_RECIPIENTS = [
+  { phone: '8562055551234', name: 'Mae', province: 'Savannakhet', relationship: 'Mother' },
+  { phone: '8562066668888', name: 'Bounmy', province: 'Vientiane', relationship: 'Son' },
+];
+
+export default function RecipientScreen({ route, navigation }: Props) {
+  const quote = route.params?.quote;
+  const { t } = useTranslation();
+  const [showNew, setShowNew] = useState(false);
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [province, setProvince] = useState('');
+  const [relationship, setRelationship] = useState('');
+
+  const selectRecipient = (r: typeof SAVED_RECIPIENTS[0]) => {
+    navigation.navigate('PayoutMethod', { quote: quote!, recipient: r, payoutMethod: 'bcel_cash', paymentMethod: 'promptpay_qr' });
+  };
+
+  const handleNew = () => {
+    if (!name.trim() || !phone.trim()) return;
+    navigation.navigate('PayoutMethod', { quote: quote!, recipient: { phone, name, province, relationship }, payoutMethod: 'bcel_cash', paymentMethod: 'promptpay_qr' });
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={styles.content}>
+          <Text style={styles.title}>{t('recipient.title')}</Text>
+          <Text style={styles.sectionTitle}>{t('recipient.saved')}</Text>
+          {SAVED_RECIPIENTS.map((r, i) => (
+            <TouchableOpacity key={i} onPress={() => selectRecipient(r)}>
+              <Card style={styles.recipientCard}>
+                <View style={styles.recipientRow}>
+                  <Avatar name={r.name} size={48} />
+                  <View style={styles.recipientInfo}>
+                    <Text style={styles.recipientName}>{r.name}</Text>
+                    <Text style={styles.recipientDetail}>{r.relationship} · {r.province}</Text>
+                  </View>
+                  <Text style={styles.selectText}>{t('recipient.select')}</Text>
+                </View>
+              </Card>
+            </TouchableOpacity>
+          ))}
+          <TouchableOpacity onPress={() => setShowNew(!showNew)} style={styles.newToggle}>
+            <Text style={styles.newToggleText}>{showNew ? '−' : '+'} {t('recipient.newRecipient')}</Text>
+          </TouchableOpacity>
+          {showNew && (
+            <Card style={styles.newForm}>
+              <Input label={t('recipient.name')} value={name} onChangeText={setName} placeholder="Mae Khammany" />
+              <Input label={t('recipient.phone')} value={phone} onChangeText={setPhone} keyboardType="phone-pad" placeholder="8562055551234" prefix="+856" />
+              <Input label={t('recipient.province')} value={province} onChangeText={setProvince} placeholder="Savannakhet" />
+              <Input label={t('recipient.relationship')} value={relationship} onChangeText={setRelationship} placeholder="Mother" />
+              <Button title={t('recipient.saveRecipient')} onPress={handleNew} fullWidth />
+            </Card>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: Colors.background },
+  content: { padding: 16 },
+  title: { fontSize: 22, fontWeight: '700', color: Colors.text, marginBottom: 20 },
+  sectionTitle: { fontSize: 16, fontWeight: '600', color: Colors.textSecondary, marginBottom: 12 },
+  recipientCard: { marginBottom: 10 },
+  recipientRow: { flexDirection: 'row', alignItems: 'center' },
+  recipientInfo: { flex: 1, marginLeft: 12 },
+  recipientName: { fontSize: 17, fontWeight: '600', color: Colors.text },
+  recipientDetail: { fontSize: 13, color: Colors.textSecondary, marginTop: 2 },
+  selectText: { fontSize: 14, color: Colors.primary, fontWeight: '600' },
+  newToggle: { paddingVertical: 16, borderTopWidth: 1, borderTopColor: Colors.divider, marginTop: 8 },
+  newToggleText: { fontSize: 16, color: Colors.primary, fontWeight: '600' },
+  newForm: { marginBottom: 16 },
+});

@@ -1,0 +1,16 @@
+{
+  "app": { "name": "เงินไซ", "tagline": "ส่งเงินไปลาว — ง่าย, เร็ว, ปลอดภัย" },
+  "splash": { "title": "ยินดีต้อนรับสู่ NgoenSai", "subtitle": "ส่งเงินไปลาว — ง่าย, เร็ว, ปลอดภัย", "lao": "ລາວ", "thai": "ไทย", "english": "English" },
+  "login": { "title": "เข้าสู่ระบบ", "phonePlaceholder": "หมายเลขโทรศัพท์", "sendOTP": "ส่ง OTP", "countryCode": "รหัสประเทศ" },
+  "otp": { "title": "ยืนยัน OTP", "subtitle": "ป้อนรหัส 6 หลักที่ส่งไปยัง {phone}", "resend": "ส่งอีกครั้งใน {seconds} วินาที", "resendNow": "ส่งอีกครั้ง", "verify": "ยืนยัน" },
+  "home": { "sendToLaos": "ส่งเงินไปลาว", "rate": "1 THB = {rate} LAK", "quickActions": "ส่งด่วน", "recentTransactions": "รายการล่าสุด", "autosend": "ส่งอัตโนมัติ: ครั้งต่อไป {date} — {amount} THB", "viewAll": "ดูทั้งหมด", "noTransactions": "ยังไม่มีรายการ" },
+  "amount": { "title": "ส่งเงิน", "enterAmount": "ป้อนจำนวนเงินเป็น THB", "suggested": "จำนวนที่แนะนำ", "rateLocked": "อัตราแลกเปลี่ยนถูกล็อค 15 นาที", "thb": "THB", "lak": "LAK", "next": "ถัดไป" },
+  "recipient": { "title": "ผู้รับเงิน", "saved": "ผู้รับที่บันทึกไว้", "newRecipient": "ผู้รับใหม่", "name": "ชื่อเต็ม", "phone": "หมายเลขโทรศัพท์", "province": "จังหวัด", "relationship": "ความสัมพันธ์", "saveRecipient": "บันทึกผู้รับ", "select": "เลือก" },
+  "payout": { "title": "วิธีการรับเงิน", "recommended": "แนะนำ", "method": { "bcel_cash": "รับเงินสดที่ BCEL", "seven_eleven_cash": "รับที่ 7-Eleven", "agent_cash": "รับผ่านตัวแทนหมู่บ้าน", "mobile_topup": "เติมเงินมือถือ", "bcel_wallet": "BCEL Wallet" }, "pickupTime": "{time} นาที", "confirm": "ยืนยัน" },
+  "confirm": { "title": "ยืนยันและชำระเงิน", "sending": "ส่ง", "receiving": "รับ", "rate": "อัตราแลกเปลี่ยน", "midMarket": "อัตราตลาด", "fee": "ค่าธรรมเนียม", "recipient": "ผู้รับ", "payoutMethod": "วิธีการรับเงิน", "payNow": "ชำระตอนนี้" },
+  "qr": { "title": "สแกนเพื่อชำระเงิน", "instructions": "เปิดแอปธนาคาร > สแกน QR > ยืนยันการชำระเงิน", "paid": "ฉันชำระแล้ว", "waiting": "กำลังรอการชำระเงิน...", "expiresIn": "หมดอายุใน {time}", "amount": "จำนวนเงิน" },
+  "success": { "title": "ส่งเงินสำเร็จ!", "subtitle": "ผู้รับจะได้รับเงินในเร็วๆ นี้", "share": "แชร์รหัสผ่าน LINE", "track": "ติดตามรายการ", "sendAgain": "ส่งอีกครั้ง", "done": "เสร็จสิ้น" },
+  "transaction": { "title": "รายละเอียดรายการ", "ref": "เลขอ้างอิง", "sent": "ส่งแล้ว", "paid": "ชำระแล้ว", "ready": "พร้อมรับเงิน", "pickedUp": "รับเงินแล้ว", "pending": "กำลังดำเนินการ", "shareReceipt": "แชร์ใบเสร็จ", "sendAgain": "ส่งอีกครั้ง", "timeline": "ไทม์ไลน์" },
+  "profile": { "title": "โปรไฟล์", "name": "ชื่อ", "phone": "โทรศัพท์", "kycLevel": "ระดับ KYC", "savedRecipients": "ผู้รับที่บันทึกไว้", "autosend": "การส่งอัตโนมัติ", "language": "ภาษา", "rateAlerts": "แจ้งเตือนอัตรา", "support": "ช่วยเหลือ", "logout": "ออกจากระบบ", "unverified": "ไม่ได้รับการยืนยัน" },
+  "common": { "save": "บันทึก", "cancel": "ยกเลิก", "back": "กลับ", "next": "ถัดไป", "confirm": "ยืนยัน", "loading": "กำลังโหลด...", "error": "เกิดข้อผิดพลาด", "retry": "ลองอีกครั้ง", "ok": "ตกลง" }
+}
