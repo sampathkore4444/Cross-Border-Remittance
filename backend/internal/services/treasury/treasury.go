@@ -7,32 +7,18 @@ import (
 	"time"
 
 	"github.com/ngoensai/backend/config"
+	"github.com/ngoensai/backend/internal/core"
 )
 
 type Repository interface {
 	GetDailyVolume(ctx context.Context, date string) (totalTHB float64, totalLAK int64, err error)
-	SaveReconciliation(ctx context.Context, r *Reconciliation) error
-	GetReconciliation(ctx context.Context, date string) (*Reconciliation, error)
+	SaveReconciliation(ctx context.Context, r *core.TreasuryReconciliation) error
+	GetReconciliation(ctx context.Context, date string) (*core.TreasuryReconciliation, error)
 }
 
 type FXService interface {
 	ConvertTHBtoLAK(ctx context.Context, amountTHB float64) (int64, error)
 	GetRate(ctx context.Context) (float64, float64, error)
-}
-
-type Reconciliation struct {
-	ID               string    `json:"id"`
-	Date             string    `json:"date"`
-	BankAccountID    string    `json:"bank_account_id"`
-	BankOpenBalance  float64   `json:"bank_open_balance"`
-	BankCloseBalance float64   `json:"bank_close_balance"`
-	BankTotalCredits float64   `json:"bank_total_credits"`
-	BankTotalDebits  float64   `json:"bank_total_debits"`
-	SystemBalance    float64   `json:"system_balance"`
-	Difference       float64   `json:"difference"`
-	DifferenceReason string    `json:"difference_reason,omitempty"`
-	Status           string    `json:"status"`
-	CreatedAt        time.Time `json:"created_at"`
 }
 
 type Service struct {
@@ -79,7 +65,7 @@ func (s *Service) RunDailyReconciliation(ctx context.Context) error {
 
 	totalTHB, totalLAK, _ := s.repo.GetDailyVolume(ctx, date)
 
-	recon := &Reconciliation{
+	recon := &core.TreasuryReconciliation{
 		Date:             date,
 		BankAccountID:    "KASIKORN-THB-001",
 		BankCloseBalance: totalTHB,

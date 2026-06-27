@@ -1,3 +1,6 @@
+import FXChart from '../components/FXChart';
+import VolumeChart from '../components/VolumeChart';
+
 const stats = [
   { label: 'Today Volume', value: '8.9M THB', change: '+12%' },
   { label: 'Transactions', value: '1,245', change: '+8%' },
@@ -25,7 +28,11 @@ export default function Dashboard() {
           </div>
         ))}
       </div>
-      <div style={styles.section}>
+      <div style={styles.chartsRow}>
+        <div style={{ flex: 1 }}><FXChart /></div>
+        <div style={{ flex: 1 }}><VolumeChart /></div>
+      </div>
+      <div style={{ ...styles.section, marginTop: 24 }}>
         <h2 style={styles.sectionTitle}>Recent Transactions</h2>
         <div style={styles.table}>
           <div style={styles.tableHeader}>
@@ -63,11 +70,12 @@ function statusStyle(status: string) {
 
 const styles: Record<string, React.CSSProperties> = {
   pageTitle: { fontSize: 24, fontWeight: 700, color: '#1A1A2E', marginBottom: 24 },
-  statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 32 },
+  statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 },
   statCard: { background: '#FFF', borderRadius: 12, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
   statLabel: { fontSize: 13, color: '#6B7280', margin: '0 0 8px' },
   statValue: { fontSize: 22, fontWeight: 700, color: '#1A1A2E', margin: '0 0 4px' },
   statChange: { fontSize: 12, fontWeight: 600, margin: 0 },
+  chartsRow: { display: 'flex', gap: 16 },
   section: { background: '#FFF', borderRadius: 12, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
   sectionTitle: { fontSize: 18, fontWeight: 700, color: '#1A1A2E', margin: '0 0 16px' },
   table: { display: 'flex', flexDirection: 'column' },

@@ -40,10 +40,10 @@ func main() {
 	}
 
 	authSvc := auth.New(pg, redis, minioSvc, cfg)
-	paymentSvc := payment.New(pg, redis, queue, cfg)
-	payoutSvc := payout.New(pg, queue, cfg)
 	fxSvc := fx.New(redis, cfg)
+	paymentSvc := payment.New(pg, redis, queue, fxSvc, cfg)
 	notifSvc := notification.New(queue, redis, cfg)
+	payoutSvc := payout.New(pg, queue, notifSvc, cfg)
 	agentSvc := agent.New(pg, redis, cfg)
 	complianceSvc := compliance.New(pg, cfg)
 	treasurySvc := treasury.New(pg, fxSvc, cfg)

@@ -62,6 +62,7 @@ export default function OTPScreen({ route, navigation }: Props) {
         {error ? <Text style={styles.error}>{error}</Text> : null}
         <Button title={t('otp.verify')} onPress={() => handleVerify()} loading={loading} fullWidth size="lg" style={styles.verifyBtn} />
         <Button title={countdown > 0 ? t('otp.resend', { seconds: countdown }) : t('otp.resendNow')} onPress={() => { setCountdown(Config.OTP_RESEND_INTERVAL); }} variant="ghost" disabled={countdown > 0} fullWidth />
+        <Button title={t('otp.callMe')} onPress={() => { setCountdown(Config.OTP_RESEND_INTERVAL); }} variant="ghost" fullWidth style={styles.callBtn} />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -76,4 +77,5 @@ const styles = StyleSheet.create({
   otpInput: { width: 48, height: 56, borderWidth: 1.5, borderColor: Colors.border, borderRadius: 12, textAlign: 'center', fontSize: 24, fontWeight: '700', color: Colors.text, backgroundColor: Colors.surface },
   error: { color: Colors.error, fontSize: 14, marginBottom: 12, textAlign: 'center' },
   verifyBtn: { marginBottom: 12 },
+  callBtn: { marginTop: 4 },
 });

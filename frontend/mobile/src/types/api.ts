@@ -95,7 +95,10 @@ export interface Transaction {
   recipient_phone: string;
   status: string;
   created_at: string;
+  paid_at?: string;
   completed_at?: string;
+  picked_up_at?: string;
+  pickup_code?: string;
 }
 
 export interface User {

@@ -34,8 +34,8 @@ type Service struct {
 	cfg   *config.Config
 }
 
-func New(repo Repository, rdb *redis.Client, q *amqp091.Channel, cfg *config.Config) *Service {
-	return &Service{repo: repo, redis: rdb, queue: q, cfg: cfg}
+func New(repo Repository, rdb *redis.Client, q *amqp091.Channel, fxSvc FXService, cfg *config.Config) *Service {
+	return &Service{repo: repo, redis: rdb, queue: q, fxSvc: fxSvc, cfg: cfg}
 }
 
 func (s *Service) Quote(ctx context.Context, sourceAmount float64, payoutMethod core.PayoutMethod) (*core.Transaction, error) {

@@ -6,31 +6,13 @@ import (
 	"time"
 
 	"github.com/ngoensai/backend/config"
+	"github.com/ngoensai/backend/internal/core"
 )
 
 type Repository interface {
-	GetTransaction(ctx context.Context, ref string) (*Transaction, error)
-	SaveAMLCheck(ctx context.Context, check *AMLCheck) error
-	ListFlaggedTransactions(ctx context.Context, status string) ([]Transaction, error)
-}
-
-type Transaction struct {
-	ID             string
-	SenderID       string
-	SourceAmount   float64
-	RecipientPhone string
-	SenderPhone    string
-	PaymentMethod  string
-	SenderDeviceID string
-}
-
-type AMLCheck struct {
-	ID             string    `json:"id"`
-	TransactionRef string    `json:"transaction_ref"`
-	CheckType      string    `json:"check_type"`
-	Status         string    `json:"status"`
-	FlaggedReason  string    `json:"flagged_reason,omitempty"`
-	CreatedAt      time.Time `json:"created_at"`
+	GetTransaction(ctx context.Context, ref string) (*core.Transaction, error)
+	SaveAMLCheck(ctx context.Context, check *core.AMLCheck) error
+	ListFlaggedTransactions(ctx context.Context, status string) ([]core.Transaction, error)
 }
 
 type Service struct {
@@ -42,7 +24,7 @@ func New(repo Repository, cfg *config.Config) *Service {
 	return &Service{repo: repo, cfg: cfg}
 }
 
-func (s *Service) ScreenTransaction(ctx context.Context, tx *Transaction) error {
+func (s *Service) ScreenTransaction(ctx context.Context, tx *core.Transaction) error {
 	if tx.SourceAmount > 50000 {
 		s.flag(ctx, tx, "amount_exceeds_threshold")
 		return fmt.Errorf("flagged: amount exceeds threshold")
@@ -58,12 +40,12 @@ func (s *Service) ScreenSanctions(ctx context.Context, name string) error {
 	return nil
 }
 
-func (s *Service) GenerateSAR(ctx context.Context, tx *Transaction) error {
+func (s *Service) GenerateSAR(ctx context.Context, tx *core.Transaction) error {
 	return nil
 }
 
-func (s *Service) flag(ctx context.Context, tx *Transaction, reason string) {
-	s.repo.SaveAMLCheck(ctx, &AMLCheck{
+func (s *Service) flag(ctx context.Context, tx *core.Transaction, reason string) {
+	s.repo.SaveAMLCheck(ctx, &core.AMLCheck{
 		TransactionRef: tx.ID,
 		CheckType:      "automated",
 		Status:         "flagged",

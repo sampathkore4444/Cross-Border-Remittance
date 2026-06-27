@@ -80,6 +80,10 @@ func (s *Service) ProcessCashOut(ctx context.Context, agentID string, amountLAK 
 	return code, nil
 }
 
+func (s *Service) GetAgent(ctx context.Context, id string) (*core.Agent, error) {
+	return s.repo.GetAgent(ctx, id)
+}
+
 func (s *Service) DepositFloat(ctx context.Context, agentID string, amount int64, method string) error {
 	balance, err := s.repo.GetFloatBalance(ctx, agentID)
 	if err != nil {

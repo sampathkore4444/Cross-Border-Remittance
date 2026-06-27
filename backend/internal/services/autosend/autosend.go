@@ -7,29 +7,18 @@ import (
 	"time"
 
 	"github.com/ngoensai/backend/config"
+	"github.com/ngoensai/backend/internal/core"
 )
 
-type Autosend struct {
-	ID           string     `json:"id"`
-	SenderID     string     `json:"sender_id"`
-	RecipientID  string     `json:"recipient_id"`
-	AmountTHB    float64    `json:"amount_thb"`
-	Frequency    string     `json:"frequency"`
-	NextSendAt   time.Time  `json:"next_send_at"`
-	LastSendAt   *time.Time `json:"last_send_at,omitempty"`
-	PayoutMethod string     `json:"payout_method"`
-	IsActive     bool       `json:"is_active"`
-}
-
 type Repository interface {
-	ListDueAutosends(ctx context.Context) ([]Autosend, error)
-	GetAutosend(ctx context.Context, id string) (*Autosend, error)
+	ListDueAutosends(ctx context.Context) ([]core.Autosend, error)
+	GetAutosend(ctx context.Context, id string) (*core.Autosend, error)
 	UpdateLastSent(ctx context.Context, id string, lastSent time.Time, nextSend time.Time) error
 	DeactivateAutosend(ctx context.Context, id string) error
 }
 
 type PaymentService interface {
-	InitiatePayment(ctx context.Context, senderID, txRef string, method string) (map[string]interface{}, error)
+	InitiatePayment(ctx context.Context, senderID, txRef string, method core.PaymentMethod) (map[string]interface{}, error)
 }
 
 type FXService interface {
@@ -71,13 +60,13 @@ func (s *Service) processDue() {
 	}
 }
 
-func (s *Service) execute(ctx context.Context, a *Autosend) error {
-	rate, _, err := s.fxSvc.GetRate(ctx)
+func (s *Service) execute(ctx context.Context, a *core.Autosend) error {
+	_, _, err := s.fxSvc.GetRate(ctx)
 	if err != nil {
 		return fmt.Errorf("get rate: %w", err)
 	}
 	txRef := fmt.Sprintf("AUTO-%s-%d", time.Now().Format("20060102"), time.Now().UnixNano())
-	_, err = s.paySvc.InitiatePayment(ctx, a.SenderID, txRef, a.PayoutMethod)
+	_, err = s.paySvc.InitiatePayment(ctx, a.SenderID, txRef, core.PaymentMethod(a.PayoutMethod))
 	if err != nil {
 		return fmt.Errorf("initiate: %w", err)
 	}

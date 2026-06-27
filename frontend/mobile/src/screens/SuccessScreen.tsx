@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Share } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, Linking, Platform } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Colors } from '@constants/colors';
 import { Card } from '@components/Card';
 import { Button } from '@components/Button';
+import Confetti from '@components/Confetti';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { SendStackParamList } from '@navigation/types';
 
@@ -13,15 +14,23 @@ export default function SuccessScreen({ route, navigation }: Props) {
   const { transactionRef, targetAmount, pickupCode, recipientName } = route.params;
   const { t } = useTranslation();
 
-  const shareViaLINE = async () => {
-    const msg = pickupCode
-      ? `I sent ${targetAmount.toLocaleString()} LAK to ${recipientName}! Pickup code: ${pickupCode}`
-      : `I sent ${targetAmount.toLocaleString()} LAK to ${recipientName}! Ref: ${transactionRef}`;
-    await Share.share({ message: msg });
+  const shareMessage = pickupCode
+    ? `I sent ${targetAmount.toLocaleString()} LAK to ${recipientName}! Pickup code: ${pickupCode}`
+    : `I sent ${targetAmount.toLocaleString()} LAK to ${recipientName}! Ref: ${transactionRef}`;
+
+  const shareLINE = () => {
+    const url = `https://line.me/R/msg/text/?${encodeURIComponent(shareMessage)}`;
+    Linking.openURL(url).catch(() => {});
+  };
+
+  const shareWhatsApp = () => {
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`;
+    Linking.openURL(url).catch(() => {});
   };
 
   return (
     <SafeAreaView style={styles.container}>
+      <Confetti />
       <View style={styles.content}>
         <View style={styles.checkmark}>
           <Text style={styles.checkmarkText}>✓</Text>
@@ -39,8 +48,16 @@ export default function SuccessScreen({ route, navigation }: Props) {
           )}
           <Text style={styles.refText}>Ref: {transactionRef}</Text>
         </Card>
+        {pickupCode && (
+          <View style={styles.shareRow}>
+            <Text style={styles.shareLabel}>{t('success.tellMom')}</Text>
+            <View style={styles.shareButtons}>
+              <Button title="LINE" onPress={shareLINE} variant="outline" style={styles.shareBtn} />
+              <Button title="WhatsApp" onPress={shareWhatsApp} variant="outline" style={styles.shareBtn} />
+            </View>
+          </View>
+        )}
         <View style={styles.buttons}>
-          {pickupCode && <Button title={t('success.share')} onPress={shareViaLINE} variant="outline" fullWidth />}
           <Button title={t('success.track')} onPress={() => navigation.getParent()?.navigate('TransactionDetail', { ref: transactionRef })} variant="outline" fullWidth />
           <Button title={t('success.sendAgain')} onPress={() => navigation.getParent()?.navigate('Send', { screen: 'Amount' })} fullWidth />
           <Button title={t('success.done')} onPress={() => navigation.getParent()?.navigate('Main', { screen: 'Home' })} variant="ghost" fullWidth />
@@ -64,5 +81,9 @@ const styles = StyleSheet.create({
   codeLabel: { fontSize: 14, color: Colors.textSecondary, marginRight: 8 },
   codeValue: { fontSize: 20, fontWeight: '800', color: Colors.text, letterSpacing: 2 },
   refText: { fontSize: 12, color: Colors.textLight, marginTop: 8 },
+  shareRow: { alignItems: 'center', marginBottom: 16, width: '100%' },
+  shareLabel: { fontSize: 13, color: Colors.textSecondary, marginBottom: 8 },
+  shareButtons: { flexDirection: 'row', gap: 12 },
+  shareBtn: { flex: 1, paddingVertical: 8 },
   buttons: { width: '100%', gap: 12 },
 });

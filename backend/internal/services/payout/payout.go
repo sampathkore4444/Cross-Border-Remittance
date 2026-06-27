@@ -2,7 +2,6 @@ package payout
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -30,8 +29,8 @@ type Service struct {
 	cfg   *config.Config
 }
 
-func New(repo Repository, q *amqp091.Channel, cfg *config.Config) *Service {
-	return &Service{repo: repo, queue: q, cfg: cfg}
+func New(repo Repository, q *amqp091.Channel, notif NotificationService, cfg *config.Config) *Service {
+	return &Service{repo: repo, queue: q, notif: notif, cfg: cfg}
 }
 
 func (s *Service) ProcessPayout(ctx context.Context, ref string) error {

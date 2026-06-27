@@ -47,6 +47,7 @@ type Transaction struct {
 	TransactionRef string `json:"transaction_ref"`
 	IdempotencyKey string `json:"-"`
 	SenderID       string `json:"sender_id"`
+	SenderDeviceID string `json:"-"`
 
 	SourceCurrency   string        `json:"source_currency"`
 	SourceAmount     float64       `json:"source_amount"`

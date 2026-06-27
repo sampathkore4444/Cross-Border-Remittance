@@ -44,8 +44,13 @@ func RegisterPayment(r *gin.Engine, paySvc PaymentService, authSvc PaymentAuthSe
 				ExchangeRate: tx.ExchangeRate,
 				TargetAmount: tx.TargetAmount,
 				FeeBreakdown: schemas.FeeBreakdown{
-					FXMargin:        tx.SourceAmount - float64(tx.TargetAmount)/tx.ExchangeRate,
-					TotalFeePercent: (1 - float64(tx.TargetAmount)/(tx.SourceAmount*tx.ExchangeRate)) * 100,
+					FXMargin:     tx.SourceAmount - float64(tx.TargetAmount)/tx.ExchangeRate,
+					TotalPercent: (1 - float64(tx.TargetAmount)/(tx.SourceAmount*tx.ExchangeRate)) * 100,
+				},
+				PayoutOptions: []schemas.PayoutOption{
+					{Method: "bcel_cash", TargetAmount: tx.TargetAmount, PickupTime: "15 min"},
+					{Method: "seven_eleven_cash", TargetAmount: tx.TargetAmount - 10000, PickupTime: "15 min"},
+					{Method: "mobile_topup", TargetAmount: int64(float64(tx.TargetAmount) * 0.97), PickupTime: "instant"},
 				},
 				RateExpiresAt: tx.QuotedAt.Add(15 * time.Minute).Format(time.RFC3339),
 			})
@@ -65,7 +70,7 @@ func RegisterPayment(r *gin.Engine, paySvc PaymentService, authSvc PaymentAuthSe
 			}
 			c.JSON(http.StatusOK, schemas.SendResponse{
 				TransactionRef: req.QuoteID,
-				Status:         "pending",
+				Status:         "awaiting_payment",
 				Payment: schemas.PaymentInfo{
 					Method:    paymentInfo["method"].(string),
 					QRCode:    paymentInfo["qr_code"].(string),

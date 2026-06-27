@@ -81,6 +81,22 @@ func (p *Postgres) GetUserByID(ctx context.Context, id string) (*core.User, erro
 	return u, nil
 }
 
+func (p *Postgres) UpdateKYCLevel(ctx context.Context, userID string, level core.KYCLevel) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	u, ok := p.users[userID]
+	if !ok {
+		return fmt.Errorf("user not found")
+	}
+	u.KYCLevel = level
+	u.UpdatedAt = time.Now()
+	return nil
+}
+
+func (p *Postgres) SaveKYCDocument(ctx context.Context, userID, docType, docNumber, frontURL, backURL, selfieURL string) error {
+	return nil
+}
+
 // ── Transaction ──
 
 func (p *Postgres) CreateTransaction(ctx context.Context, tx *core.Transaction) error {
@@ -302,21 +318,6 @@ func (p *Postgres) GetFloatBalance(ctx context.Context, agentID string) (int64, 
 
 // ── Treasury ──
 
-type TreasuryReconciliation struct {
-	ID               string    `json:"id"`
-	Date             string    `json:"date"`
-	BankAccountID    string    `json:"bank_account_id"`
-	BankOpenBalance  float64   `json:"bank_open_balance"`
-	BankCloseBalance float64   `json:"bank_close_balance"`
-	BankTotalCredits float64   `json:"bank_total_credits"`
-	BankTotalDebits  float64   `json:"bank_total_debits"`
-	SystemBalance    float64   `json:"system_balance"`
-	Difference       float64   `json:"difference"`
-	DifferenceReason string    `json:"difference_reason,omitempty"`
-	Status           string    `json:"status"`
-	CreatedAt        time.Time `json:"created_at"`
-}
-
 func (p *Postgres) GetDailyVolume(ctx context.Context, date string) (totalTHB float64, totalLAK int64, err error) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
@@ -329,7 +330,7 @@ func (p *Postgres) GetDailyVolume(ctx context.Context, date string) (totalTHB fl
 	return totalTHB, totalLAK, nil
 }
 
-func (p *Postgres) SaveReconciliation(ctx context.Context, r *TreasuryReconciliation) error {
+func (p *Postgres) SaveReconciliation(ctx context.Context, r *core.TreasuryReconciliation) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if r.ID == "" {
@@ -340,7 +341,7 @@ func (p *Postgres) SaveReconciliation(ctx context.Context, r *TreasuryReconcilia
 	return nil
 }
 
-func (p *Postgres) GetReconciliation(ctx context.Context, date string) (*TreasuryReconciliation, error) {
+func (p *Postgres) GetReconciliation(ctx context.Context, date string) (*core.TreasuryReconciliation, error) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	for _, r := range p.recons {
@@ -353,48 +354,7 @@ func (p *Postgres) GetReconciliation(ctx context.Context, date string) (*Treasur
 
 // ── Compliance ──
 
-type coreTransaction struct {
-	ID             string
-	SenderID       string
-	SourceAmount   float64
-	RecipientPhone string
-	SenderPhone    string
-	PaymentMethod  string
-	SenderDeviceID string
-}
-
-type AMLCheck struct {
-	ID             string    `json:"id"`
-	TransactionRef string    `json:"transaction_ref"`
-	CheckType      string    `json:"check_type"`
-	Status         string    `json:"status"`
-	FlaggedReason  string    `json:"flagged_reason,omitempty"`
-	CreatedAt      time.Time `json:"created_at"`
-}
-
-func (p *Postgres) GetComplianceTransaction(ctx context.Context, ref string) (*coreTransaction, error) {
-	p.mu.RLock()
-	defer p.mu.RUnlock()
-	tx, ok := p.txns[ref]
-	if !ok {
-		return nil, fmt.Errorf("transaction not found")
-	}
-	user, _ := p.users[tx.SenderID]
-	phone := ""
-	if user != nil {
-		phone = user.Phone
-	}
-	return &coreTransaction{
-		ID:             tx.ID,
-		SenderID:       tx.SenderID,
-		SourceAmount:   tx.SourceAmount,
-		RecipientPhone: tx.RecipientPhone,
-		SenderPhone:    phone,
-		PaymentMethod:  string(tx.PaymentMethod),
-	}, nil
-}
-
-func (p *Postgres) SaveAMLCheck(ctx context.Context, check *AMLCheck) error {
+func (p *Postgres) SaveAMLCheck(ctx context.Context, check *core.AMLCheck) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if check.ID == "" {
@@ -405,19 +365,15 @@ func (p *Postgres) SaveAMLCheck(ctx context.Context, check *AMLCheck) error {
 	return nil
 }
 
-func (p *Postgres) ListFlaggedTransactions(ctx context.Context, status string) ([]coreTransaction, error) {
+func (p *Postgres) ListFlaggedTransactions(ctx context.Context, status string) ([]core.Transaction, error) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
-	var result []coreTransaction
+	var result []core.Transaction
 	for _, check := range p.amlChecks {
 		if status == "" || check.Status == status {
 			tx, ok := p.txns[check.TransactionRef]
 			if ok {
-				result = append(result, coreTransaction{
-					ID:           tx.ID,
-					SenderID:     tx.SenderID,
-					SourceAmount: tx.SourceAmount,
-				})
+				result = append(result, *tx)
 			}
 		}
 	}
@@ -426,23 +382,11 @@ func (p *Postgres) ListFlaggedTransactions(ctx context.Context, status string) (
 
 // ── Autosend ──
 
-type Autosend struct {
-	ID           string     `json:"id"`
-	SenderID     string     `json:"sender_id"`
-	RecipientID  string     `json:"recipient_id"`
-	AmountTHB    float64    `json:"amount_thb"`
-	Frequency    string     `json:"frequency"`
-	NextSendAt   time.Time  `json:"next_send_at"`
-	LastSendAt   *time.Time `json:"last_send_at,omitempty"`
-	PayoutMethod string     `json:"payout_method"`
-	IsActive     bool       `json:"is_active"`
-}
-
-func (p *Postgres) ListDueAutosends(ctx context.Context) ([]Autosend, error) {
+func (p *Postgres) ListDueAutosends(ctx context.Context) ([]core.Autosend, error) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	now := time.Now()
-	var due []Autosend
+	var due []core.Autosend
 	for _, a := range p.autosends {
 		if a.IsActive && a.NextSendAt.Before(now) {
 			due = append(due, *a)
@@ -451,7 +395,7 @@ func (p *Postgres) ListDueAutosends(ctx context.Context) ([]Autosend, error) {
 	return due, nil
 }
 
-func (p *Postgres) GetAutosend(ctx context.Context, id string) (*Autosend, error) {
+func (p *Postgres) GetAutosend(ctx context.Context, id string) (*core.Autosend, error) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	a, ok := p.autosends[id]
@@ -484,7 +428,7 @@ func (p *Postgres) DeactivateAutosend(ctx context.Context, id string) error {
 	return nil
 }
 
-func (p *Postgres) CreateAutosend(ctx context.Context, a *Autosend) error {
+func (p *Postgres) CreateAutosend(ctx context.Context, a *core.Autosend) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if a.ID == "" {

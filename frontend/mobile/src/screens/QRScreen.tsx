@@ -53,7 +53,15 @@ export default function QRScreen({ route, navigation }: Props) {
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         <Text style={styles.title}>{t('qr.title')}</Text>
-        {!paid && <View style={styles.timer}><Text style={styles.timerText}>{t('qr.expiresIn', { time: `${minutes}:${seconds.toString().padStart(2, '0')}` })}</Text></View>}
+        {!paid && (
+          <>
+            <View style={styles.timer}><Text style={styles.timerText}>{t('qr.expiresIn', { time: `${minutes}:${seconds.toString().padStart(2, '0')}` })}</Text></View>
+            <View style={styles.progressIndicator}>
+              <View style={styles.progressDot} />
+              <Text style={styles.progressText}>{t('qr.waitingPayment')}</Text>
+            </View>
+          </>
+        )}
         <Card style={styles.qrCard}>
           <QRCode
             value={qrValue}
@@ -81,8 +89,11 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   content: { flex: 1, padding: 16, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 22, fontWeight: '700', color: Colors.text, marginBottom: 16 },
-  timer: { marginBottom: 16 },
+  timer: { marginBottom: 8 },
   timerText: { fontSize: 14, color: Colors.accent, fontWeight: '600' },
+  progressIndicator: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+  progressDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.accent, marginRight: 8 },
+  progressText: { fontSize: 13, color: Colors.textSecondary },
   qrCard: { padding: 24, marginBottom: 16, alignItems: 'center', width: '100%' },
   qrSubtext: { fontSize: 14, color: Colors.textLight, marginTop: 8 },
   amountCard: { padding: 16, alignItems: 'center', width: '100%', marginBottom: 16 },

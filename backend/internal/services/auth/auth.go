@@ -12,7 +12,6 @@ import (
 	"github.com/ngoensai/backend/internal/core"
 	"github.com/ngoensai/backend/internal/services/minio"
 	"github.com/redis/go-redis/v9"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type Repository interface {
@@ -55,6 +54,24 @@ func (s *Service) SendOTP(ctx context.Context, phone string) error {
 	return nil
 }
 
+func extractCountryCode(phone string) string {
+	if len(phone) >= 4 && phone[:1] == "+" {
+		if len(phone) >= 3 && phone[:3] == "+66" {
+			return "+66"
+		}
+		if len(phone) >= 3 && phone[:3] == "+85" {
+			return "+856"
+		}
+		if len(phone) >= 2 {
+			return phone[:2]
+		}
+	}
+	if len(phone) >= 3 {
+		return phone[:3]
+	}
+	return phone
+}
+
 func (s *Service) VerifyOTP(ctx context.Context, phone, code string) (*core.User, error) {
 	key := fmt.Sprintf("otp:%s", phone)
 	attemptsKey := fmt.Sprintf("otp_attempts:%s", phone)
@@ -80,7 +97,7 @@ func (s *Service) VerifyOTP(ctx context.Context, phone, code string) (*core.User
 	if err != nil {
 		user = &core.User{
 			Phone:       phone,
-			CountryCode: phone[:3],
+			CountryCode: extractCountryCode(phone),
 			Role:        core.RoleSender,
 			KYCLevel:    core.KYCUnverified,
 			Language:    "lo",
@@ -134,10 +151,16 @@ func (s *Service) ValidateToken(tokenStr string) (*core.User, error) {
 	if !ok {
 		return nil, fmt.Errorf("invalid claims")
 	}
+	sub, _ := claims["sub"].(string)
+	phone, _ := claims["phone"].(string)
+	roleStr, _ := claims["role"].(string)
+	kycStr, _ := claims["kyc"].(string)
+
 	return &core.User{
-		ID:    claims["sub"].(string),
-		Phone: claims["phone"].(string),
-		Role:  core.UserRole(claims["role"].(string)),
+		ID:       sub,
+		Phone:    phone,
+		Role:     core.UserRole(roleStr),
+		KYCLevel: core.KYCLevel(kycStr),
 	}, nil
 }
 

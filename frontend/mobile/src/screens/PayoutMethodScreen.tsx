@@ -17,6 +17,13 @@ const METHODS: { key: PayoutMethod; time: string }[] = [
   { key: 'bcel_wallet', time: '0' },
 ];
 
+const NEARBY_LOCATIONS = [
+  { name: 'BCEL Vientiane Main', address: '143 Rue Setthathirath, Vientiane', distance: '0.3 km', method: 'bcel_cash' },
+  { name: '7-Eleven Talat Sao', address: 'Talat Sao Mall, Vientiane', distance: '0.8 km', method: 'seven_eleven_cash' },
+  { name: 'BCEL Dongpalan', address: 'Dongpalan Road, Vientiane', distance: '1.2 km', method: 'bcel_cash' },
+  { name: '7-Eleven Dongpalan', address: 'Dongpalan Road, Vientiane', distance: '1.5 km', method: 'seven_eleven_cash' },
+];
+
 export default function PayoutMethodScreen({ route, navigation }: Props) {
   const { quote, recipient } = route.params;
   const { t } = useTranslation();
@@ -28,6 +35,8 @@ export default function PayoutMethodScreen({ route, navigation }: Props) {
   const handleConfirm = () => {
     navigation.navigate('Confirm', { quote, recipient, payoutMethod: selected, paymentMethod: 'promptpay_qr' });
   };
+
+  const filteredLocations = NEARBY_LOCATIONS.filter(l => l.method === selected);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -55,6 +64,24 @@ export default function PayoutMethodScreen({ route, navigation }: Props) {
             </TouchableOpacity>
           );
         })}
+        {filteredLocations.length > 0 && (
+          <View style={styles.mapSection}>
+            <Text style={styles.mapTitle}>{t('payout.nearbyLocations')}</Text>
+            <View style={styles.mapPlaceholder}>
+              <Text style={styles.mapIcon}>📍</Text>
+              {filteredLocations.map((loc, i) => (
+                <View key={i} style={styles.locationRow}>
+                  <View style={styles.locationDot} />
+                  <View style={styles.locationInfo}>
+                    <Text style={styles.locationName}>{loc.name}</Text>
+                    <Text style={styles.locationAddress}>{loc.address}</Text>
+                  </View>
+                  <Text style={styles.locationDistance}>{loc.distance}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
         <View style={styles.summary}>
           <Text style={styles.summaryLabel}>{recipient.name}</Text>
           <Text style={styles.summaryAmount}>{displayAmount.toLocaleString()} LAK</Text>
@@ -81,4 +108,14 @@ const styles = StyleSheet.create({
   summary: { alignItems: 'center', paddingVertical: 24 },
   summaryLabel: { fontSize: 14, color: Colors.textSecondary },
   summaryAmount: { fontSize: 28, fontWeight: '800', color: Colors.text, marginTop: 4 },
+  mapSection: { marginTop: 16, marginBottom: 8 },
+  mapTitle: { fontSize: 16, fontWeight: '700', color: Colors.text, marginBottom: 10 },
+  mapPlaceholder: { backgroundColor: Colors.surface, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: Colors.border },
+  mapIcon: { fontSize: 28, textAlign: 'center', marginBottom: 12 },
+  locationRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+  locationDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.primary, marginRight: 10 },
+  locationInfo: { flex: 1 },
+  locationName: { fontSize: 14, fontWeight: '600', color: Colors.text },
+  locationAddress: { fontSize: 12, color: Colors.textLight, marginTop: 1 },
+  locationDistance: { fontSize: 12, fontWeight: '600', color: Colors.primary },
 });
