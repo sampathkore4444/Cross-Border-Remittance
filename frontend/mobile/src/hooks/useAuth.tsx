@@ -1,6 +1,7 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { api } from '@services/api';
 import * as SecureStore from 'expo-secure-store';
+import i18n from '@i18n/index';
 import type { User } from '@types/api';
 
 interface AuthState {
@@ -46,6 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function demoLogin() {
     api.enableDemoMode();
+    await i18n.changeLanguage('en');
     const user: User = { id: 'demo-001', phone: '8562055551234', name: 'Demo User', kyc_level: 'level_2', language: 'en' };
     setState({ user, isAuthenticated: true, isLoading: false });
   }

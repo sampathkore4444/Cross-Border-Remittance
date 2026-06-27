@@ -3,16 +3,17 @@ import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Colors } from '@constants/colors';
 import { Button } from '@components/Button';
+import { changeLanguage } from '@i18n/index';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '@navigation/types';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Splash'>;
 
 export default function SplashScreen({ navigation }: Props) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
 
   const selectLanguage = (lng: string) => {
-    i18n.changeLanguage(lng);
+    changeLanguage(lng);
     navigation.replace('Login');
   };
 
