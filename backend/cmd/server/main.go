@@ -63,6 +63,9 @@ func main() {
 	routes.RegisterWebhooks(r, paymentSvc, payoutSvc)
 	routes.RegisterAdmin(r, authSvc, treasurySvc, complianceSvc)
 
+	fraudEngine := middleware.NewFraudEngine()
+	r.Use(middleware.FraudVelocityCheck(fraudEngine))
+
 	treasurySvc.StartAutoConversion()
 	autoSvc.StartScheduler()
 

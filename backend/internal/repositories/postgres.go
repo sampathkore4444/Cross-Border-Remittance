@@ -131,12 +131,20 @@ func (p *Postgres) UpdatePaymentStatus(ctx context.Context, ref string, status c
 	if !ok {
 		return fmt.Errorf("transaction not found")
 	}
+	from := string(tx.PaymentStatus)
 	tx.PaymentStatus = status
 	tx.PaymentReference = payRef
 	if !paidAt.IsZero() {
 		tx.PaidAt = &paidAt
 	}
 	tx.UpdatedAt = time.Now()
+	p.txnLogs = append(p.txnLogs, core.TransactionStatusLog{
+		TransactionID: tx.TransactionRef,
+		StatusFrom:    from,
+		StatusTo:      string(status),
+		ChangedBy:     "system",
+		CreatedAt:     time.Now(),
+	})
 	return nil
 }
 
@@ -147,10 +155,18 @@ func (p *Postgres) UpdatePayoutStatus(ctx context.Context, ref string, status co
 	if !ok {
 		return fmt.Errorf("transaction not found")
 	}
+	from := string(tx.PayoutStatus)
 	tx.PayoutStatus = status
 	tx.PayoutReference = payoutRef
 	tx.CompletedAt = completedAt
 	tx.UpdatedAt = time.Now()
+	p.txnLogs = append(p.txnLogs, core.TransactionStatusLog{
+		TransactionID: tx.TransactionRef,
+		StatusFrom:    from,
+		StatusTo:      string(status),
+		ChangedBy:     "system",
+		CreatedAt:     time.Now(),
+	})
 	return nil
 }
 
@@ -159,9 +175,18 @@ func (p *Postgres) UpdatePickupCollected(ctx context.Context, pickupCode string,
 	defer p.mu.Unlock()
 	for _, tx := range p.txns {
 		if tx.PickupCode == pickupCode {
+			from := string(tx.PayoutStatus)
 			tx.CompletedAt = &collectedAt
 			tx.PayoutStatus = core.POutCompleted
 			tx.UpdatedAt = time.Now()
+			p.txnLogs = append(p.txnLogs, core.TransactionStatusLog{
+				TransactionID: tx.TransactionRef,
+				StatusFrom:    from,
+				StatusTo:      string(core.POutCompleted),
+				ChangedBy:     "system",
+				Reason:        "pickup collected",
+				CreatedAt:     time.Now(),
+			})
 			return nil
 		}
 	}
@@ -437,4 +462,22 @@ func (p *Postgres) CreateAutosend(ctx context.Context, a *core.Autosend) error {
 	a.IsActive = true
 	p.autosends[a.ID] = a
 	return nil
+}
+
+func (p *Postgres) GetUserCount(ctx context.Context) (int, error) {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return len(p.users), nil
+}
+
+func (p *Postgres) GetActiveAgentCount(ctx context.Context) (int, error) {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	count := 0
+	for _, a := range p.agents {
+		if a.IsActive {
+			count++
+		}
+	}
+	return count, nil
 }

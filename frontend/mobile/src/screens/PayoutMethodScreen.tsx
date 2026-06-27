@@ -29,7 +29,7 @@ export default function PayoutMethodScreen({ route, navigation }: Props) {
   const { t } = useTranslation();
   const [selected, setSelected] = useState<PayoutMethod>('bcel_cash');
 
-  const selectedOption = quote.payout_options?.find(o => o.method === selected);
+  const selectedOption = quote.payout_options?.find((o: { method: string }) => o.method === selected);
   const displayAmount = selectedOption?.target_amount || quote.target_amount;
 
   const handleConfirm = () => {
@@ -43,11 +43,11 @@ export default function PayoutMethodScreen({ route, navigation }: Props) {
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>{t('payout.title')}</Text>
         {METHODS.map(({ key, time }) => {
-          const opt = quote.payout_options?.find(o => o.method === key);
+          const opt = quote.payout_options?.find((o: { method: string }) => o.method === key);
           const amount = opt?.target_amount;
           return (
             <TouchableOpacity key={key} onPress={() => setSelected(key)}>
-              <Card style={[styles.methodCard, selected === key && styles.methodCardSelected]}>
+              <Card style={selected === key ? [styles.methodCard, styles.methodCardSelected] : [styles.methodCard]}>
                 <View style={styles.methodHeader}>
                   <View style={styles.methodInfo}>
                     <Text style={styles.methodName}>{t(`payout.method.${key}`)}</Text>

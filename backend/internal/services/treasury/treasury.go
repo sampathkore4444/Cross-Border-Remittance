@@ -14,6 +14,8 @@ type Repository interface {
 	GetDailyVolume(ctx context.Context, date string) (totalTHB float64, totalLAK int64, err error)
 	SaveReconciliation(ctx context.Context, r *core.TreasuryReconciliation) error
 	GetReconciliation(ctx context.Context, date string) (*core.TreasuryReconciliation, error)
+	GetUserCount(ctx context.Context) (int, error)
+	GetActiveAgentCount(ctx context.Context) (int, error)
 }
 
 type FXService interface {
@@ -86,5 +88,26 @@ func (s *Service) GetBalanceSummary(ctx context.Context) (map[string]interface{}
 			"current_market":  577.0,
 			"unrealized_pnl":  5375,
 		},
+	}, nil
+}
+
+func (s *Service) GetAdminStats(ctx context.Context) (map[string]interface{}, error) {
+	today := time.Now().Format("2006-01-02")
+	volTHB, volLAK, _ := s.repo.GetDailyVolume(ctx, today)
+	userCount, _ := s.repo.GetUserCount(ctx)
+	agentCount, _ := s.repo.GetActiveAgentCount(ctx)
+
+	rate, _, _ := s.fx.GetRate(ctx)
+	revenue := volTHB * 0.0052
+
+	return map[string]interface{}{
+		"today_volume":       fmt.Sprintf("%.1fM THB", volTHB/1e6),
+		"transactions_today": fmt.Sprintf("%.0f", volTHB/5000),
+		"active_agents":      agentCount,
+		"revenue_today":      fmt.Sprintf("%.0f THB", revenue),
+		"total_users":        userCount,
+		"today_volume_thb":   volTHB,
+		"today_volume_lak":   volLAK,
+		"current_rate":       rate,
 	}, nil
 }

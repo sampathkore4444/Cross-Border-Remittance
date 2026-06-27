@@ -14,6 +14,7 @@ type AdminAuthService interface {
 
 type AdminTreasuryService interface {
 	GetBalanceSummary(ctx context.Context) (map[string]interface{}, error)
+	GetAdminStats(ctx context.Context) (map[string]interface{}, error)
 }
 
 type AdminComplianceService interface {
@@ -40,13 +41,12 @@ func RegisterAdmin(r *gin.Engine, authSvc AdminAuthService, treasurySvc AdminTre
 		})
 
 		g.GET("/stats", func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{
-				"today_volume":       "8.9M THB",
-				"transactions_today": 1245,
-				"active_agents":      48,
-				"revenue_today":      "245,670 THB",
-				"total_users":        12580,
-			})
+			stats, err := treasurySvc.GetAdminStats(c.Request.Context())
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK, stats)
 		})
 
 		g.GET("/treasury", func(c *gin.Context) {

@@ -8,19 +8,24 @@ import { Header } from '@components/Header';
 import { Loading } from '@components/Loading';
 import { api } from '@services/api';
 import QRScannerScreen from './QRScannerScreen';
+import RecipientPhotoCapture from './RecipientPhotoCapture';
 
 export default function AgentDashboardScreen({ navigation }: any) {
   const { t } = useTranslation();
   const [agent, setAgent] = useState<any>(null);
+  const [recentTxns, setRecentTxns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showScanner, setShowScanner] = useState(false);
   const [showCashIn, setShowCashIn] = useState(false);
   const [showCashOut, setShowCashOut] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
+  const [recipientPhoto, setRecipientPhoto] = useState<string | null>(null);
   const [amount, setAmount] = useState('');
   const [senderPhone, setSenderPhone] = useState('');
 
   useEffect(() => {
     loadAgent();
+    loadRecentTxns();
   }, []);
 
   const loadAgent = async () => {
@@ -29,6 +34,13 @@ export default function AgentDashboardScreen({ navigation }: any) {
       setAgent(res.data);
     } catch { }
     setLoading(false);
+  };
+
+  const loadRecentTxns = async () => {
+    try {
+      const res = await api.client.get('/agents/transactions', { params: { limit: 10 } });
+      setRecentTxns(res.data?.transactions || []);
+    } catch { }
   };
 
   const handleScan = (data: string) => {
@@ -42,6 +54,11 @@ export default function AgentDashboardScreen({ navigation }: any) {
     } catch {
       Alert.alert('Invalid QR', 'Could not parse the QR code data.');
     }
+  };
+
+  const handlePhotoCapture = (photoUri: string) => {
+    setRecipientPhoto(photoUri);
+    setShowCamera(false);
   };
 
   const handleCashIn = async () => {
@@ -58,6 +75,7 @@ export default function AgentDashboardScreen({ navigation }: any) {
       setAmount('');
       setSenderPhone('');
       loadAgent();
+      loadRecentTxns();
     } catch (e: any) {
       Alert.alert('Error', e.response?.data?.error || 'Cash-in failed');
     }
@@ -70,12 +88,15 @@ export default function AgentDashboardScreen({ navigation }: any) {
         agent_id: agent?.id,
         amount_lak: parseInt(amount, 10),
         recipient_phone: senderPhone,
+        recipient_photo: recipientPhoto,
       });
       Alert.alert('Success', 'Cash-out completed');
       setShowCashOut(false);
       setAmount('');
       setSenderPhone('');
+      setRecipientPhoto(null);
       loadAgent();
+      loadRecentTxns();
     } catch (e: any) {
       Alert.alert('Error', e.response?.data?.error || 'Cash-out failed');
     }
@@ -101,11 +122,27 @@ export default function AgentDashboardScreen({ navigation }: any) {
             <Text style={styles.actionIcon}>-</Text>
             <Text style={styles.actionText}>Cash Out</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: Colors.primary }]} onPress={() => setShowScanner(true)}>
+            <TouchableOpacity style={[styles.actionBtn, { backgroundColor: Colors.primary }]} onPress={() => setShowScanner(true)}>
             <Text style={styles.actionIcon}>◻</Text>
             <Text style={styles.actionText}>Scan QR</Text>
           </TouchableOpacity>
         </View>
+        {recentTxns.length > 0 && (
+          <Card style={styles.historyCard}>
+            <Text style={styles.historyTitle}>Recent Transactions</Text>
+            {recentTxns.slice(0, 5).map((txn: any, i: number) => (
+              <View key={i} style={styles.historyRow}>
+                <View style={styles.historyInfo}>
+                  <Text style={styles.historyPhone}>{txn.recipient_phone || txn.sender_phone}</Text>
+                  <Text style={styles.historyDate}>{new Date(txn.created_at).toLocaleDateString()}</Text>
+                </View>
+                <Text style={[styles.historyAmount, txn.type === 'cash_in' ? styles.amountIn : styles.amountOut]}>
+                  {txn.type === 'cash_in' ? '+' : '-'}{txn.amount?.toLocaleString()}
+                </Text>
+              </View>
+            ))}
+          </Card>
+        )}
       </ScrollView>
 
       <Modal visible={showScanner} animationType="slide">
@@ -156,14 +193,24 @@ export default function AgentDashboardScreen({ navigation }: any) {
               placeholderTextColor={Colors.textLight}
             />
             <Text style={styles.recipientLabel}>Recipient: {senderPhone || 'N/A'}</Text>
+            <TouchableOpacity style={styles.photoBtn} onPress={() => setShowCamera(true)}>
+              <Text style={styles.photoBtnText}>{recipientPhoto ? 'Photo captured' : 'Take recipient photo (audit)'}</Text>
+            </TouchableOpacity>
             <View style={styles.modalButtons}>
-              <Button title={t('common.cancel')} variant="ghost" onPress={() => setShowCashOut(false)} />
+              <Button title={t('common.cancel')} variant="ghost" onPress={() => { setShowCashOut(false); setRecipientPhoto(null); }} />
               <Button title={t('common.confirm')} onPress={handleCashOut} />
             </View>
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+
+      <Modal visible={showCamera} animationType="slide">
+          <RecipientPhotoCapture
+            onCapture={handlePhotoCapture}
+            onClose={() => setShowCamera(false)}
+          />
+        </Modal>
+      </SafeAreaView>
   );
 }
 
@@ -184,4 +231,15 @@ const styles = StyleSheet.create({
   input: { borderWidth: 1, borderColor: Colors.border, borderRadius: 12, padding: 14, fontSize: 16, color: Colors.text, marginBottom: 12 },
   modalButtons: { flexDirection: 'row', justifyContent: 'flex-end', gap: 12, marginTop: 12 },
   recipientLabel: { fontSize: 14, color: Colors.textSecondary, marginBottom: 12 },
+  photoBtn: { backgroundColor: Colors.rateBadge, borderRadius: 10, padding: 14, alignItems: 'center', marginBottom: 12 },
+  photoBtnText: { fontSize: 14, color: Colors.rateText, fontWeight: '600' },
+  historyCard: { padding: 16, marginBottom: 16 },
+  historyTitle: { fontSize: 16, fontWeight: '700', color: Colors.text, marginBottom: 12 },
+  historyRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: Colors.divider },
+  historyInfo: { flex: 1 },
+  historyPhone: { fontSize: 14, fontWeight: '600', color: Colors.text },
+  historyDate: { fontSize: 12, color: Colors.textLight, marginTop: 2 },
+  historyAmount: { fontSize: 16, fontWeight: '700' },
+  amountIn: { color: Colors.success },
+  amountOut: { color: Colors.error },
 });

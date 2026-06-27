@@ -30,7 +30,7 @@ export default function ProfileScreen({ navigation }: any) {
         text: lang.label,
         onPress: () => changeLanguage(lang.key),
         style: i18n.language === lang.key ? ('cancel' as const) : ('default' as const),
-      })).concat([{ text: t('common.cancel'), onPress: () => {}, style: 'cancel' as const }]),
+      })).concat([{ text: t('common.cancel'), onPress: async () => {}, style: 'cancel' as const }]),
     );
   };
 
