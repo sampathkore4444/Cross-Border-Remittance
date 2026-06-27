@@ -8,22 +8,13 @@ import th from './th.json';
 
 const STORAGE_KEY = '@ngoensai/language';
 
-async function initLanguage() {
-  const stored = await AsyncStorage.getItem(STORAGE_KEY);
-  if (stored) return stored;
+const lng = 'en';
 
-  const locale = Localization.getLocales()?.[0]?.languageCode || 'lo';
-  const supported = ['lo', 'th', 'en'];
-  return supported.includes(locale) ? locale : 'lo';
-}
-
-initLanguage().then(lng => {
-  i18n.use(initReactI18next).init({
-    resources: { en: { translation: en }, lo: { translation: lo }, th: { translation: th } },
-    lng,
-    fallbackLng: 'lo',
-    interpolation: { escapeValue: false },
-  });
+i18n.use(initReactI18next).init({
+  resources: { en: { translation: en }, lo: { translation: lo }, th: { translation: th } },
+  lng,
+  fallbackLng: 'en',
+  interpolation: { escapeValue: false },
 });
 
 export async function changeLanguage(lng: string) {

@@ -5,6 +5,7 @@ import { Colors } from '@constants/colors';
 import { Button } from '@components/Button';
 import { Input } from '@components/Input';
 import { api } from '@services/api';
+import { useAuth } from '@hooks/useAuth';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '@navigation/types';
 
@@ -12,6 +13,7 @@ type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
 export default function LoginScreen({ navigation }: Props) {
   const { t } = useTranslation();
+  const { demoLogin } = useAuth();
   const [phone, setPhone] = useState('');
   const [countryCode, setCountryCode] = useState('856');
   const [loading, setLoading] = useState(false);
@@ -43,6 +45,7 @@ export default function LoginScreen({ navigation }: Props) {
           <Input label={t('login.phonePlaceholder')} value={phone} onChangeText={setPhone} keyboardType="phone-pad" placeholder="20 5555 1234" />
           {error ? <Text style={styles.error}>{error}</Text> : null}
           <Button title={t('login.sendOTP')} onPress={handleSendOTP} loading={loading} fullWidth size="lg" style={styles.sendBtn} />
+          <Button title="Demo Mode (Skip Login)" onPress={demoLogin} variant="ghost" fullWidth size="md" style={styles.demoBtn} />
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -58,4 +61,5 @@ const styles = StyleSheet.create({
   form: { width: '100%' },
   error: { color: Colors.error, fontSize: 14, marginBottom: 12, textAlign: 'center' },
   sendBtn: { marginTop: 8 },
+  demoBtn: { marginTop: 16, borderTopWidth: 1, borderTopColor: Colors.divider, paddingTop: 16 },
 });

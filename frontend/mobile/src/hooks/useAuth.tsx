@@ -11,6 +11,7 @@ interface AuthState {
 
 interface AuthContextType extends AuthState {
   login: (phone: string, otp: string) => Promise<void>;
+  demoLogin: () => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -43,6 +44,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState({ user, isAuthenticated: true, isLoading: false });
   }
 
+  async function demoLogin() {
+    api.enableDemoMode();
+    const user: User = { id: 'demo-001', phone: '8562055551234', name: 'Demo User', kyc_level: 'level_2', language: 'en' };
+    setState({ user, isAuthenticated: true, isLoading: false });
+  }
+
   async function logout() {
     await api.logout();
     setState({ user: null, isAuthenticated: false, isLoading: false });
@@ -50,7 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function refreshUser() { }
 
-  return <AuthContext.Provider value={{ ...state, login, logout, refreshUser }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ ...state, login, demoLogin, logout, refreshUser }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
