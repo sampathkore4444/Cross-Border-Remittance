@@ -32,16 +32,16 @@ export default function Dashboard() {
 
   return (
     <div>
-      <h1 style={styles.pageTitle}>Dashboard</h1>
-      <div style={styles.statsGrid}>
+      <h1 style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 24 }}>Dashboard</h1>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
         {cards.map((s, i) => (
-          <div key={i} style={styles.statCard}>
-            <p style={styles.statLabel}>{s.label}</p>
-            <p style={styles.statValue}>{s.value}</p>
+          <div key={i} style={{ background: 'var(--card-bg)', borderRadius: 12, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 8px' }}>{s.label}</p>
+            <p style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 4px' }}>{s.value}</p>
           </div>
         ))}
       </div>
-      <div style={styles.chartsRow}>
+      <div style={{ display: 'flex', gap: 16 }}>
         <div style={{ flex: 1 }}><FXChart /></div>
         <div style={{ flex: 1 }}><VolumeChart /></div>
       </div>
@@ -60,12 +60,3 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
     </div>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  pageTitle: { fontSize: 24, fontWeight: 700, color: '#1A1A2E', marginBottom: 24 },
-  statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 },
-  statCard: { background: '#FFF', borderRadius: 12, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
-  statLabel: { fontSize: 13, color: '#6B7280', margin: '0 0 8px' },
-  statValue: { fontSize: 22, fontWeight: 700, color: '#1A1A2E', margin: '0 0 4px' },
-  chartsRow: { display: 'flex', gap: 16 },
-};

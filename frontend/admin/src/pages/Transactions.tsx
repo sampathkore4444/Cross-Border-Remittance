@@ -94,9 +94,9 @@ export default function Transactions() {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 700, color: '#1A1A2E', margin: 0 }}>Transactions</h1>
+        <h1 style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Transactions</h1>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <span style={{ fontSize: 13, color: '#6B7280' }}>{data?.total ?? 0} total</span>
+          <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{data?.total ?? 0} total</span>
           <button onClick={exportCSV} style={{
             padding: '8px 16px', borderRadius: 8, border: '1px solid #D1D5DB',
             background: '#FFF', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#374151',
@@ -127,11 +127,11 @@ export default function Transactions() {
         )}
       </form>
 
-      <div style={{ background: '#FFF', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', overflow: 'auto' }}>
+      <div style={{ background: 'var(--card-bg)', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', overflow: 'auto' }}>
         <div style={{
           display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr 1fr',
-          padding: '14px 20px', borderBottom: '1px solid #E5E7EB',
-          fontSize: 12, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase',
+          padding: '14px 20px', borderBottom: '1px solid var(--border-color)',
+          fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase',
         }}>
           <span>Ref</span><span>Sender</span><span>Recipient</span>
           <span>Amount</span><span>Status</span><span>Time</span>
@@ -145,8 +145,8 @@ export default function Transactions() {
               onClick={() => openDetail(tx.transaction_ref || tx.id)}
               style={{
                 display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr 1fr',
-                padding: '14px 20px', borderBottom: '1px solid #F0F0F0',
-                fontSize: 14, color: '#1A1A2E', alignItems: 'center', cursor: 'pointer',
+                padding: '14px 20px', borderBottom: '1px solid var(--border-color)',
+                fontSize: 14, color: 'var(--text-primary)', alignItems: 'center', cursor: 'pointer',
                 transition: 'background 0.15s',
               }}
               onMouseEnter={(e) => (e.currentTarget.style.background = '#F8F9FA')}

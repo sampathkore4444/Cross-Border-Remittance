@@ -70,7 +70,7 @@ export default function Compliance() {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 700, color: '#1A1A2E', margin: 0 }}>Compliance</h1>
+        <h1 style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Compliance</h1>
         <button onClick={exportCSV} style={{
           padding: '8px 16px', borderRadius: 8, border: '1px solid #D1D5DB',
           background: '#FFF', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#374151',
@@ -86,7 +86,7 @@ export default function Compliance() {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 24 }}>
         {sanctions.map((s, i) => (
-          <div key={i} style={{ background: '#FFF', borderRadius: 12, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+          <div key={i} style={{ background: 'var(--card-bg)', borderRadius: 12, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
             <p style={{ fontSize: 14, color: '#6B7280', margin: '0 0 8px' }}>{s.type}</p>
             <p style={{ fontSize: 13, color: '#9CA3AF', margin: '0 0 8px' }}>Hits: {s.hits}</p>
             <span style={{
@@ -160,7 +160,7 @@ export default function Compliance() {
         )}
       </div>
 
-      <div style={{ background: '#FFF', borderRadius: 12, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+      <div style={{ background: 'var(--card-bg)', borderRadius: 12, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
         <h3 style={{ fontSize: 16, fontWeight: 700, color: '#1A1A2E', margin: '0 0 12px' }}>AML Screening Rules</h3>
         <ul style={{ margin: 0, paddingLeft: 20, color: '#6B7280', fontSize: 14, lineHeight: 2 }}>
           <li>Velocity check: &gt;5 tx/hour from same sender → Flag</li>

@@ -71,9 +71,9 @@ export default function Agents() {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 700, color: '#1A1A2E', margin: 0 }}>Agent Management</h1>
+        <h1 style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Agent Management</h1>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <span style={{ fontSize: 13, color: '#6B7280' }}>{data?.total ?? 0} agents</span>
+          <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{data?.total ?? 0} agents</span>
           <button onClick={exportCSV} style={{
             padding: '8px 16px', borderRadius: 8, border: '1px solid #D1D5DB',
             background: '#FFF', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#374151',
@@ -88,10 +88,10 @@ export default function Agents() {
         </div>
       )}
 
-      <div style={{ background: '#FFF', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', overflow: 'auto' }}>
+      <div style={{ background: 'var(--card-bg)', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', overflow: 'auto' }}>
         <div style={{
           display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr 1fr 1fr 1fr 120px',
-          padding: '14px 20px', borderBottom: '1px solid #E5E7EB',
+          padding: '14px 20px', borderBottom: '1px solid var(--border-color)',
           fontSize: 12, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase',
         }}>
           <span>Shop Name</span><span>Owner</span><span>Type</span><span>Location</span><span>Float (LAK)</span><span>Status</span><span>KYC</span><span>Actions</span>

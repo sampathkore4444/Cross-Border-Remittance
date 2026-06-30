@@ -37,7 +37,7 @@ export default function Users() {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 700, color: '#1A1A2E', margin: 0 }}>User Management</h1>
+        <h1 style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>User Management</h1>
         <span style={{ fontSize: 13, color: '#6B7280' }}>{data?.total ?? 0} total</span>
       </div>
 
@@ -48,7 +48,7 @@ export default function Users() {
         </div>
       )}
 
-      <div style={{ background: '#FFF', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', overflow: 'auto' }}>
+      <div style={{ background: 'var(--card-bg)', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', overflow: 'auto' }}>
         <div style={{
           display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr 1fr 120px',
           padding: '14px 20px', borderBottom: '1px solid #E5E7EB',
