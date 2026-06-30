@@ -173,4 +173,24 @@ export async function fetchAdminLogs(page = 1, limit = 50): Promise<LogResponse>
   return data;
 }
 
+export async function fetchWebhookLogs(page = 1, limit = 50): Promise<LogResponse> {
+  const { data } = await api.get(`/v1/admin/webhook-logs?page=${page}&limit=${limit}`);
+  return data;
+}
+
+export async function fetchFXRate(): Promise<any> {
+  const { data } = await api.get('/v1/admin/fx/rate');
+  return data;
+}
+
+export async function setFXOverride(rate: number, midMarket: number): Promise<{ status: string }> {
+  const { data } = await api.post('/v1/admin/fx/rate', { rate, mid_market: midMarket });
+  return data;
+}
+
+export async function clearFXOverride(): Promise<{ status: string }> {
+  const { data } = await api.delete('/v1/admin/fx/rate');
+  return data;
+}
+
 export default api;
