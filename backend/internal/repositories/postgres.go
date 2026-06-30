@@ -25,6 +25,7 @@ type Postgres struct {
 	autosends    map[string]*core.Autosend
 	recipients   map[string][]*core.RecipientProfile
 	adminLogs    []core.AdminLog
+	webhookLogs  []core.WebhookLog
 
 	nextID int64
 }
@@ -648,6 +649,36 @@ func (p *Postgres) ListAdminLogs(ctx context.Context, page, limit int) ([]core.A
 	var result []core.AdminLog
 	for i := len(p.adminLogs) - 1; i >= 0; i-- {
 		result = append(result, p.adminLogs[i])
+	}
+	return result[start:end], total, nil
+}
+
+func (p *Postgres) SaveWebhookLog(ctx context.Context, log *core.WebhookLog) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if log.ID == "" {
+		log.ID = p.nextIDStr("WH")
+	}
+	log.CreatedAt = time.Now()
+	p.webhookLogs = append(p.webhookLogs, *log)
+	return nil
+}
+
+func (p *Postgres) ListWebhookLogs(ctx context.Context, page, limit int) ([]core.WebhookLog, int, error) {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	total := len(p.webhookLogs)
+	start := (page - 1) * limit
+	if start >= total {
+		return []core.WebhookLog{}, total, nil
+	}
+	end := start + limit
+	if end > total {
+		end = total
+	}
+	var result []core.WebhookLog
+	for i := len(p.webhookLogs) - 1; i >= 0; i-- {
+		result = append(result, p.webhookLogs[i])
 	}
 	return result[start:end], total, nil
 }

@@ -13,12 +13,14 @@ import (
 )
 
 type Service struct {
-	redis       *redis.Client
-	cfg         *config.Config
-	mu          sync.RWMutex
-	currentRate float64
-	midMarket   float64
-	lastUpdated time.Time
+	redis        *redis.Client
+	cfg          *config.Config
+	mu           sync.RWMutex
+	currentRate  float64
+	midMarket    float64
+	lastUpdated  time.Time
+	overrideRate *float64
+	overrideMid  *float64
 }
 
 func New(rdb *redis.Client, cfg *config.Config) *Service {
@@ -102,4 +104,33 @@ func (s *Service) ConvertTHBtoLAK(ctx context.Context, amountTHB float64) (int64
 func (s *Service) fetchMidMarketRate(ctx context.Context) (float64, error) {
 	rate := s.cfg.FXBaseRate + rand.Float64()*s.cfg.FXRateVariance
 	return rate, nil
+}
+
+func (s *Service) SetOverrideRate(ctx context.Context, rate, midMarket float64) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.overrideRate = &rate
+	s.overrideMid = &midMarket
+	s.currentRate = rate
+	s.midMarket = midMarket
+	s.lastUpdated = time.Now()
+	return nil
+}
+
+func (s *Service) ClearOverrideRate(ctx context.Context) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.overrideRate = nil
+	s.overrideMid = nil
+	s.refreshRate()
+	return nil
+}
+
+func (s *Service) GetOverrideStatus(ctx context.Context) (bool, float64, float64) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if s.overrideRate != nil {
+		return true, *s.overrideRate, *s.overrideMid
+	}
+	return false, 0, 0
 }

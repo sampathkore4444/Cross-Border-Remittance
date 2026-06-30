@@ -5,10 +5,14 @@ import "time"
 type UserRole string
 
 const (
-	RoleSender    UserRole = "sender"
-	RoleRecipient UserRole = "recipient"
-	RoleAgent     UserRole = "agent"
-	RoleAdmin     UserRole = "admin"
+	RoleSender            UserRole = "sender"
+	RoleRecipient         UserRole = "recipient"
+	RoleAgent             UserRole = "agent"
+	RoleAdmin             UserRole = "admin"
+	RoleSuperAdmin        UserRole = "super_admin"
+	RoleComplianceOfficer UserRole = "compliance_officer"
+	RoleTreasuryManager   UserRole = "treasury_manager"
+	RoleSupport           UserRole = "support"
 )
 
 type KYCLevel string

@@ -79,8 +79,8 @@ func main() {
 	routes.RegisterFX(r, fxSvc, authSvc)
 	routes.RegisterAgent(r, agentSvc, authSvc)
 	routes.RegisterTreasury(r, treasurySvc, authSvc)
-	routes.RegisterWebhooks(r, paymentSvc, payoutSvc)
-	routes.RegisterAdmin(r, authSvc, treasurySvc, complianceSvc, pg)
+	routes.RegisterWebhooks(r, paymentSvc, payoutSvc, pg)
+	routes.RegisterAdmin(r, authSvc, treasurySvc, complianceSvc, fxSvc, cfg.JWTSecret, pg)
 
 	fraudEngine := middleware.NewFraudEngine()
 	r.Use(middleware.FraudVelocityCheck(fraudEngine))

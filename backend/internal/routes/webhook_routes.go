@@ -11,6 +11,7 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ngoensai/backend/internal/core"
 )
 
 var webhookSecret = getWebhookSecret()
@@ -44,7 +45,11 @@ type WebhookPayoutService interface {
 	ProcessPayout(ctx context.Context, ref string) error
 }
 
-func RegisterWebhooks(r *gin.Engine, paySvc WebhookPaymentService, payoutSvc WebhookPayoutService) {
+type WebhookLogStore interface {
+	SaveWebhookLog(ctx context.Context, log *core.WebhookLog) error
+}
+
+func RegisterWebhooks(r *gin.Engine, paySvc WebhookPaymentService, payoutSvc WebhookPayoutService, logStore WebhookLogStore) {
 	paymentHandler := func(c *gin.Context) {
 		body, err := io.ReadAll(c.Request.Body)
 		if err != nil {
@@ -52,8 +57,18 @@ func RegisterWebhooks(r *gin.Engine, paySvc WebhookPaymentService, payoutSvc Web
 			return
 		}
 		sig := c.GetHeader("X-Signature")
-		if err := verifyWebhookSignature(body, sig); err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		sigErr := verifyWebhookSignature(body, sig)
+		if sigErr != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": sigErr.Error()})
+			logStore.SaveWebhookLog(c.Request.Context(), &core.WebhookLog{
+				EventType:      "payment.confirmed",
+				Source:         "webhook",
+				TransactionRef: "",
+				RequestBody:    string(body),
+				ResponseStatus: http.StatusUnauthorized,
+				SignatureValid: false,
+				Error:          sigErr.Error(),
+			})
 			return
 		}
 
@@ -64,6 +79,15 @@ func RegisterWebhooks(r *gin.Engine, paySvc WebhookPaymentService, payoutSvc Web
 		}
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			logStore.SaveWebhookLog(c.Request.Context(), &core.WebhookLog{
+				EventType:      "payment.confirmed",
+				Source:         "webhook",
+				TransactionRef: req.TransactionRef,
+				RequestBody:    string(body),
+				ResponseStatus: http.StatusBadRequest,
+				SignatureValid: true,
+				Error:          err.Error(),
+			})
 			return
 		}
 		if req.Status != "success" {
@@ -72,8 +96,25 @@ func RegisterWebhooks(r *gin.Engine, paySvc WebhookPaymentService, payoutSvc Web
 		}
 		if err := paySvc.ConfirmPayment(c.Request.Context(), req.TransactionRef, req.ProviderRef); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			logStore.SaveWebhookLog(c.Request.Context(), &core.WebhookLog{
+				EventType:      "payment.confirmed",
+				Source:         "webhook",
+				TransactionRef: req.TransactionRef,
+				RequestBody:    string(body),
+				ResponseStatus: http.StatusBadRequest,
+				SignatureValid: true,
+				Error:          err.Error(),
+			})
 			return
 		}
+		logStore.SaveWebhookLog(c.Request.Context(), &core.WebhookLog{
+			EventType:      "payment.confirmed",
+			Source:         "webhook",
+			TransactionRef: req.TransactionRef,
+			RequestBody:    string(body),
+			ResponseStatus: http.StatusOK,
+			SignatureValid: true,
+		})
 		c.JSON(http.StatusOK, gin.H{"status": "confirmed"})
 	}
 
@@ -87,8 +128,17 @@ func RegisterWebhooks(r *gin.Engine, paySvc WebhookPaymentService, payoutSvc Web
 				return
 			}
 			sig := c.GetHeader("X-Signature")
-			if err := verifyWebhookSignature(body, sig); err != nil {
-				c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+			sigErr := verifyWebhookSignature(body, sig)
+			if sigErr != nil {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": sigErr.Error()})
+				logStore.SaveWebhookLog(c.Request.Context(), &core.WebhookLog{
+					EventType:      "payout.completed",
+					Source:         "webhook",
+					RequestBody:    string(body),
+					ResponseStatus: http.StatusUnauthorized,
+					SignatureValid: false,
+					Error:          sigErr.Error(),
+				})
 				return
 			}
 
@@ -98,12 +148,38 @@ func RegisterWebhooks(r *gin.Engine, paySvc WebhookPaymentService, payoutSvc Web
 			}
 			if err := c.ShouldBindJSON(&req); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				logStore.SaveWebhookLog(c.Request.Context(), &core.WebhookLog{
+					EventType:      "payout.completed",
+					Source:         "webhook",
+					TransactionRef: req.TransactionRef,
+					RequestBody:    string(body),
+					ResponseStatus: http.StatusBadRequest,
+					SignatureValid: true,
+					Error:          err.Error(),
+				})
 				return
 			}
 			if err := payoutSvc.ProcessPayout(c.Request.Context(), req.TransactionRef); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				logStore.SaveWebhookLog(c.Request.Context(), &core.WebhookLog{
+					EventType:      "payout.completed",
+					Source:         "webhook",
+					TransactionRef: req.TransactionRef,
+					RequestBody:    string(body),
+					ResponseStatus: http.StatusBadRequest,
+					SignatureValid: true,
+					Error:          err.Error(),
+				})
 				return
 			}
+			logStore.SaveWebhookLog(c.Request.Context(), &core.WebhookLog{
+				EventType:      "payout.completed",
+				Source:         "webhook",
+				TransactionRef: req.TransactionRef,
+				RequestBody:    string(body),
+				ResponseStatus: http.StatusOK,
+				SignatureValid: true,
+			})
 			c.JSON(http.StatusOK, gin.H{"status": "completed"})
 		})
 	}

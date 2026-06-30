@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/ngoensai/backend/internal/common/middleware"
 	"github.com/ngoensai/backend/internal/core"
 )
 
@@ -21,6 +24,13 @@ type AdminTreasuryService interface {
 
 type AdminComplianceService interface {
 	ScreenSanctions(ctx context.Context, name string) error
+}
+
+type AdminFXService interface {
+	GetRate(ctx context.Context) (float64, float64, error)
+	SetOverrideRate(ctx context.Context, rate, midMarket float64) error
+	ClearOverrideRate(ctx context.Context) error
+	GetOverrideStatus(ctx context.Context) (bool, float64, float64)
 }
 
 type AdminStore interface {
@@ -39,39 +49,58 @@ type AdminStore interface {
 	UpdateUserStatus(ctx context.Context, id string, isActive bool) error
 	SaveAdminLog(ctx context.Context, log *core.AdminLog) error
 	ListAdminLogs(ctx context.Context, page, limit int) ([]core.AdminLog, int, error)
+	ListWebhookLogs(ctx context.Context, page, limit int) ([]core.WebhookLog, int, error)
 }
 
 type adminHandler struct {
 	authSvc       AdminAuthService
 	treasurySvc   AdminTreasuryService
 	complianceSvc AdminComplianceService
+	fxSvc         AdminFXService
+	jwtSecret     string
 	store         AdminStore
 }
 
-func RegisterAdmin(r *gin.Engine, authSvc AdminAuthService, treasurySvc AdminTreasuryService, complianceSvc AdminComplianceService, store AdminStore) {
+func RegisterAdmin(r *gin.Engine, authSvc AdminAuthService, treasurySvc AdminTreasuryService, complianceSvc AdminComplianceService, fxSvc AdminFXService, jwtSecret string, store AdminStore) {
 	h := &adminHandler{
 		authSvc:       authSvc,
 		treasurySvc:   treasurySvc,
 		complianceSvc: complianceSvc,
+		fxSvc:         fxSvc,
+		jwtSecret:     jwtSecret,
 		store:         store,
 	}
+
+	auth := middleware.AdminAuthRequired(jwtSecret)
 
 	g := r.Group("/v1/admin")
 	{
 		g.POST("/login", h.login)
-		g.GET("/stats", h.stats)
-		g.GET("/treasury", h.treasury)
-		g.GET("/transactions", h.listTransactions)
-		g.GET("/transactions/:ref", h.getTransactionDetail)
-		g.GET("/agents", h.listAgents)
-		g.PUT("/agents/:id/status", h.updateAgentStatus)
-		g.POST("/agents/:id/float", h.depositAgentFloat)
-		g.GET("/flagged", h.listFlagged)
-		g.PUT("/flagged/:id/review", h.reviewFlagged)
-		g.POST("/sanctions/check", h.sanctionsCheck)
-		g.GET("/users", h.listUsers)
-		g.PUT("/users/:id/status", h.updateUserStatus)
-		g.GET("/logs", h.listLogs)
+
+		g.GET("/stats", auth, middleware.RequirePermission(core.PermViewTreasury), h.stats)
+		g.GET("/treasury", auth, middleware.RequirePermission(core.PermViewTreasury), h.treasury)
+
+		g.GET("/transactions", auth, middleware.RequirePermission(core.PermViewTransactions), h.listTransactions)
+		g.GET("/transactions/:ref", auth, middleware.RequirePermission(core.PermViewTransactions), h.getTransactionDetail)
+
+		g.GET("/agents", auth, middleware.RequirePermission(core.PermViewAgents), h.listAgents)
+		g.PUT("/agents/:id/status", auth, middleware.RequirePermission(core.PermManageAgents), h.updateAgentStatus)
+		g.POST("/agents/:id/float", auth, middleware.RequirePermission(core.PermManageAgents), h.depositAgentFloat)
+
+		g.GET("/flagged", auth, middleware.RequirePermission(core.PermViewCompliance), h.listFlagged)
+		g.PUT("/flagged/:id/review", auth, middleware.RequirePermission(core.PermManageCompliance), h.reviewFlagged)
+		g.POST("/sanctions/check", auth, middleware.RequirePermission(core.PermManageCompliance), h.sanctionsCheck)
+
+		g.GET("/users", auth, middleware.RequirePermission(core.PermViewUsers), h.listUsers)
+		g.PUT("/users/:id/status", auth, middleware.RequirePermission(core.PermManageUsers), h.updateUserStatus)
+
+		g.GET("/logs", auth, middleware.RequirePermission(core.PermViewLogs), h.listLogs)
+
+		g.GET("/webhook-logs", auth, middleware.RequirePermission(core.PermViewWebhookLogs), h.listWebhookLogs)
+
+		g.GET("/fx/rate", auth, middleware.RequirePermission(core.PermManageFX), h.getFXRate)
+		g.POST("/fx/rate", auth, middleware.RequirePermission(core.PermManageFX), h.setFXOverride)
+		g.DELETE("/fx/rate", auth, middleware.RequirePermission(core.PermManageFX), h.clearFXOverride)
 	}
 }
 
@@ -84,10 +113,43 @@ func (h *adminHandler) login(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	adminRole := core.RoleAdmin
+	if req.Username == "super" && req.Password == "admin" {
+		adminRole = core.RoleSuperAdmin
+	} else if req.Username == "compliance" && req.Password == "admin" {
+		adminRole = core.RoleComplianceOfficer
+	} else if req.Username == "treasury" && req.Password == "admin" {
+		adminRole = core.RoleTreasuryManager
+	} else if req.Username == "support" && req.Password == "admin" {
+		adminRole = core.RoleSupport
+	} else if req.Username == "admin" && req.Password == "admin" {
+		adminRole = core.RoleAdmin
+	} else {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
+		return
+	}
+
+	claims := jwt.MapClaims{
+		"sub":  req.Username,
+		"role": string(adminRole),
+		"exp":  time.Now().Add(2 * time.Hour).Unix(),
+		"iat":  time.Now().Unix(),
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenStr, err := token.SignedString([]byte(h.jwtSecret))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "token generation failed"})
+		return
+	}
+
+	h.auditLog(c.Request.Context(), req.Username, "login", "", "Role: "+string(adminRole))
+
 	c.JSON(http.StatusOK, gin.H{
-		"access_token":  "admin-" + req.Username + "-token",
+		"access_token":  tokenStr,
 		"refresh_token": "admin-refresh-" + req.Username,
-		"expires_in":    3600,
+		"expires_in":    7200,
+		"role":          string(adminRole),
 	})
 }
 
@@ -215,7 +277,8 @@ func (h *adminHandler) updateAgentStatus(c *gin.Context) {
 	if req.IsActive {
 		status = "active"
 	}
-	h.auditLog(c.Request.Context(), "admin", "update_agent_status", id, "Status: "+status)
+	adminID, _ := c.Get("admin_id")
+	h.auditLog(c.Request.Context(), adminID.(string), "update_agent_status", id, "Status: "+status)
 	c.JSON(http.StatusOK, gin.H{"status": status})
 }
 
@@ -243,14 +306,15 @@ func (h *adminHandler) depositAgentFloat(c *gin.Context) {
 		Method:  "admin_topup",
 		Status:  "completed",
 	})
-	h.auditLog(c.Request.Context(), "admin", "deposit_float", id, "Amount: "+fmt.Sprintf("%d", req.Amount)+" LAK")
+	adminID, _ := c.Get("admin_id")
+	h.auditLog(c.Request.Context(), adminID.(string), "deposit_float", id, "Amount: "+fmt.Sprintf("%d", req.Amount)+" LAK")
 	c.JSON(http.StatusOK, gin.H{"status": "deposited", "amount": req.Amount})
 }
 
 func (h *adminHandler) reviewFlagged(c *gin.Context) {
 	id := c.Param("id")
 	var req struct {
-		Action string `json:"action" binding:"required"` // "dismiss" or "escalate"
+		Action string `json:"action" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -264,7 +328,8 @@ func (h *adminHandler) reviewFlagged(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	h.auditLog(c.Request.Context(), "admin", "review_flagged", id, "Action: "+req.Action)
+	adminID, _ := c.Get("admin_id")
+	h.auditLog(c.Request.Context(), adminID.(string), "review_flagged", id, "Action: "+req.Action)
 	c.JSON(http.StatusOK, gin.H{"status": newStatus})
 }
 
@@ -325,7 +390,8 @@ func (h *adminHandler) updateUserStatus(c *gin.Context) {
 	if req.IsActive {
 		status = "activated"
 	}
-	h.auditLog(c.Request.Context(), "admin", "update_user_status", id, "Status: "+status)
+	adminID, _ := c.Get("admin_id")
+	h.auditLog(c.Request.Context(), adminID.(string), "update_user_status", id, "Status: "+status)
 	c.JSON(http.StatusOK, gin.H{"status": status})
 }
 
@@ -351,13 +417,79 @@ func (h *adminHandler) listLogs(c *gin.Context) {
 	})
 }
 
+func (h *adminHandler) listWebhookLogs(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 || limit > 200 {
+		limit = 50
+	}
+	logs, total, err := h.store.ListWebhookLogs(c.Request.Context(), page, limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"logs":  logs,
+		"total": total,
+		"page":  page,
+		"limit": limit,
+	})
+}
+
+func (h *adminHandler) getFXRate(c *gin.Context) {
+	rate, midRate, err := h.fxSvc.GetRate(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "rate not available"})
+		return
+	}
+	overridden, overrideRate, overrideMid := h.fxSvc.GetOverrideStatus(c.Request.Context())
+	c.JSON(http.StatusOK, gin.H{
+		"rate":          rate,
+		"mid_market":    midRate,
+		"spread":        midRate - rate,
+		"currency":      "THB_LAK",
+		"overridden":    overridden,
+		"override_rate": overrideRate,
+		"override_mid":  overrideMid,
+	})
+}
+
+func (h *adminHandler) setFXOverride(c *gin.Context) {
+	var req struct {
+		Rate      float64 `json:"rate" binding:"required"`
+		MidMarket float64 `json:"mid_market" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := h.fxSvc.SetOverrideRate(c.Request.Context(), req.Rate, req.MidMarket); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	adminID, _ := c.Get("admin_id")
+	h.auditLog(c.Request.Context(), adminID.(string), "fx_override", "", fmt.Sprintf("Rate: %.4f, Mid: %.4f", req.Rate, req.MidMarket))
+	c.JSON(http.StatusOK, gin.H{"status": "overridden"})
+}
+
+func (h *adminHandler) clearFXOverride(c *gin.Context) {
+	if err := h.fxSvc.ClearOverrideRate(c.Request.Context()); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	adminID, _ := c.Get("admin_id")
+	h.auditLog(c.Request.Context(), adminID.(string), "fx_override_clear", "", "")
+	c.JSON(http.StatusOK, gin.H{"status": "cleared"})
+}
+
 func (h *adminHandler) auditLog(ctx context.Context, adminID, action, targetID, detail string) {
-	entry := &core.AdminLog{
-		ID:       "",
+	h.store.SaveAdminLog(ctx, &core.AdminLog{
 		AdminID:  adminID,
 		Action:   action,
 		TargetID: targetID,
 		Detail:   detail,
-	}
-	h.store.SaveAdminLog(ctx, entry)
+	})
 }

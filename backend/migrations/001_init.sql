@@ -161,6 +161,21 @@ CREATE TABLE IF NOT EXISTS admin_logs (
 CREATE INDEX IF NOT EXISTS idx_admin_logs_admin ON admin_logs(admin_id);
 CREATE INDEX IF NOT EXISTS idx_admin_logs_action ON admin_logs(action);
 
+CREATE TABLE IF NOT EXISTS webhook_logs (
+    id VARCHAR(64) PRIMARY KEY,
+    event_type VARCHAR(64) NOT NULL DEFAULT '',
+    source VARCHAR(64) NOT NULL DEFAULT '',
+    transaction_ref VARCHAR(128) NOT NULL DEFAULT '',
+    request_body TEXT NOT NULL DEFAULT '',
+    response_status INT NOT NULL DEFAULT 0,
+    signature_valid BOOLEAN NOT NULL DEFAULT false,
+    error TEXT NOT NULL DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_webhook_logs_event ON webhook_logs(event_type);
+CREATE INDEX IF NOT EXISTS idx_webhook_logs_tx ON webhook_logs(transaction_ref);
+
 CREATE TABLE IF NOT EXISTS schema_migrations (
     filename VARCHAR(255) PRIMARY KEY,
     applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

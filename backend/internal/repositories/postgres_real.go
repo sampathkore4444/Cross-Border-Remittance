@@ -592,6 +592,39 @@ func (p *RealPostgres) SaveAdminLog(ctx context.Context, log *core.AdminLog) err
 		log.ID, log.AdminID, log.Action, log.TargetID, log.Detail, log.CreatedAt)
 }
 
+func (p *RealPostgres) SaveWebhookLog(ctx context.Context, log *core.WebhookLog) error {
+	log.CreatedAt = time.Now()
+	return p.exec(ctx,
+		`INSERT INTO webhook_logs (id, event_type, source, transaction_ref, request_body, response_status, signature_valid, error, created_at)
+		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+		log.ID, log.EventType, log.Source, log.TransactionRef, log.RequestBody, log.ResponseStatus, log.SignatureValid, log.Error, log.CreatedAt)
+}
+
+func (p *RealPostgres) ListWebhookLogs(ctx context.Context, page, limit int) ([]core.WebhookLog, int, error) {
+	offset := (page - 1) * limit
+	rows, err := p.query(ctx,
+		`SELECT id, event_type, source, transaction_ref, request_body, response_status, signature_valid, error, created_at FROM webhook_logs ORDER BY created_at DESC LIMIT $1 OFFSET $2`,
+		limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+	var result []core.WebhookLog
+	for rows.Next() {
+		var l core.WebhookLog
+		if err := rows.Scan(&l.ID, &l.EventType, &l.Source, &l.TransactionRef, &l.RequestBody, &l.ResponseStatus, &l.SignatureValid, &l.Error, &l.CreatedAt); err != nil {
+			return nil, 0, err
+		}
+		result = append(result, l)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+	var total int
+	p.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM webhook_logs`).Scan(&total)
+	return result, total, nil
+}
+
 func (p *RealPostgres) ListAdminLogs(ctx context.Context, page, limit int) ([]core.AdminLog, int, error) {
 	offset := (page - 1) * limit
 	rows, err := p.query(ctx,

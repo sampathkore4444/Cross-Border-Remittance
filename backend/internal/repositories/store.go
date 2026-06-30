@@ -61,6 +61,9 @@ type Store interface {
 	SaveAdminLog(ctx context.Context, log *core.AdminLog) error
 	ListAdminLogs(ctx context.Context, page, limit int) ([]core.AdminLog, int, error)
 
+	SaveWebhookLog(ctx context.Context, log *core.WebhookLog) error
+	ListWebhookLogs(ctx context.Context, page, limit int) ([]core.WebhookLog, int, error)
+
 	GetUserCount(ctx context.Context) (int, error)
 	GetActiveAgentCount(ctx context.Context) (int, error)
 }
