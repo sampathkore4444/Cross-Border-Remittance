@@ -50,6 +50,7 @@ func (s *Service) flag(ctx context.Context, tx *core.Transaction, reason string)
 		CheckType:      "automated",
 		Status:         "flagged",
 		FlaggedReason:  reason,
+		Reason:         reason,
 		CreatedAt:      time.Now(),
 	})
 }

@@ -79,14 +79,35 @@ func (s *Service) RunDailyReconciliation(ctx context.Context) error {
 }
 
 func (s *Service) GetBalanceSummary(ctx context.Context) (map[string]interface{}, error) {
+	today := time.Now().Format("2006-01-02")
+	volTHB, volLAK, _ := s.repo.GetDailyVolume(ctx, today)
+
+	recon, _ := s.repo.GetReconciliation(ctx, today)
+	var bankTHB, bankLAK float64
+	if recon != nil {
+		if recon.BankAccountID == "KASIKORN-THB-001" {
+			bankTHB = recon.BankCloseBalance
+		} else {
+			bankLAK = recon.SystemBalance
+		}
+	}
+
+	rate, _, err := s.fx.GetRate(ctx)
+	if err != nil {
+		rate = s.cfg.FXBaseRate
+	}
+
 	return map[string]interface{}{
-		"kasikorn_thb": 8450000,
-		"bcel_lak":     452000000,
+		"kasikorn_thb":     bankTHB,
+		"bcel_lak":         bankLAK,
+		"today_volume":     volTHB,
+		"today_volume_lak": volLAK,
+		"current_rate":     rate,
 		"fx_position": map[string]interface{}{
-			"pending_sells":   2150000,
-			"avg_rate_locked": 574.5,
-			"current_market":  577.0,
-			"unrealized_pnl":  5375,
+			"pending_sells":   volTHB * 0.8,
+			"avg_rate_locked": rate - s.cfg.FXSpreadLAK,
+			"current_market":  rate,
+			"unrealized_pnl":  volTHB * 0.0052 * rate,
 		},
 	}, nil
 }

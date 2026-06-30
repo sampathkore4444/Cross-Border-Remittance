@@ -3,6 +3,6 @@ export const Config = {
   OTP_RESEND_INTERVAL: 60,
   RATE_EXPIRY_SECONDS: 900,
   MAX_RETRY_ATTEMPTS: 3,
-  SENTRY_DSN: '',
+  SENTRY_DSN: __DEV__ ? '' : 'https://xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx@o123456.ingest.sentry.io/654321',
   APP_VERSION: '1.0.0',
 };

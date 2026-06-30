@@ -100,6 +100,6 @@ func (s *Service) ConvertTHBtoLAK(ctx context.Context, amountTHB float64) (int64
 }
 
 func (s *Service) fetchMidMarketRate(ctx context.Context) (float64, error) {
-	rate := 575.0 + rand.Float64()*6
+	rate := s.cfg.FXBaseRate + rand.Float64()*s.cfg.FXRateVariance
 	return rate, nil
 }

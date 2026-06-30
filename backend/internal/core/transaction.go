@@ -67,11 +67,13 @@ type Transaction struct {
 	PayoutReference string       `json:"payout_reference,omitempty"`
 	PayoutFee       int64        `json:"payout_fee,omitempty"`
 
-	RecipientPhone string `json:"recipient_phone"`
-	RecipientName  string `json:"recipient_name"`
-	RecipientID    string `json:"recipient_id,omitempty"`
+	RecipientPhone    string `json:"recipient_phone"`
+	RecipientName     string `json:"recipient_name"`
+	RecipientProvince string `json:"recipient_province,omitempty"`
+	RecipientID       string `json:"recipient_id,omitempty"`
 
 	PickupCode      string     `json:"pickup_code,omitempty"`
+	PickedUpAt      *time.Time `json:"picked_up_at,omitempty"`
 	PickupExpiresAt *time.Time `json:"pickup_expires_at,omitempty"`
 
 	QuotedAt    time.Time  `json:"quoted_at"`

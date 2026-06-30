@@ -6,6 +6,7 @@ import { Card } from '@components/Card';
 import { Button } from '@components/Button';
 import { Loading } from '@components/Loading';
 import { api } from '@services/api';
+import { useToast } from '@components/Toast';
 import type { Transaction } from '@types/api';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@navigation/types';
@@ -26,15 +27,18 @@ function formatDate(d?: string): string {
   return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-export default function TransactionDetailScreen({ route }: Props) {
+export default function TransactionDetailScreen({ route, navigation }: Props) {
   const { ref } = route.params;
   const { t } = useTranslation();
+  const { showToast } = useToast();
   const [tx, setTx] = useState<Transaction | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.getTransaction(ref).then(setTx).catch(() => { }).finally(() => setLoading(false));
-  }, [ref]);
+    api.getTransaction(ref).then(setTx).catch(() => {
+      showToast(t('common.networkError'), 'error');
+    }).finally(() => setLoading(false));
+  }, [ref, showToast, t]);
 
   if (loading) return <Loading fullScreen />;
   if (!tx) return <View style={styles.container}><Text>{t('common.error')}</Text></View>;
@@ -81,6 +85,12 @@ export default function TransactionDetailScreen({ route }: Props) {
           ))}
         </Card>
         <View style={styles.buttons}>
+          {tx.status === 'payout_initiated' && (
+            <Button title={t('pickupVerification.button')} onPress={() => navigation.navigate('QRScanner', { transactionRef: ref })} variant="outline" fullWidth />
+          )}
+          {tx.status !== 'redeemed' && tx.status !== 'completed' && (
+            <Button title={t('pickupVerification.uploadReceipt')} onPress={() => navigation.navigate('PhotoCapture', { transactionRef: ref })} variant="outline" fullWidth />
+          )}
           <Button title={t('transaction.shareReceipt')} onPress={shareReceipt} variant="outline" fullWidth />
           <Button title={t('transaction.sendAgain')} onPress={() => { }} fullWidth />
         </View>

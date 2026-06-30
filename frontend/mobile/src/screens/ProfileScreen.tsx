@@ -52,7 +52,7 @@ export default function ProfileScreen({ navigation }: any) {
           </View>
         </View>
         <Card style={styles.menuCard}>
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Send', { screen: 'Recipient' })}>
             <Text style={styles.menuText}>{t('profile.savedRecipients')}</Text>
             <Text style={styles.menuArrow}>→</Text>
           </TouchableOpacity>

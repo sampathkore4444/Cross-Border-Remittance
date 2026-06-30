@@ -6,6 +6,7 @@ import { Button } from '@components/Button';
 import { Input } from '@components/Input';
 import { api } from '@services/api';
 import { useAuth } from '@hooks/useAuth';
+import { validatePhone, normalizePhone } from '@utils/validation';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '@navigation/types';
 
@@ -20,11 +21,12 @@ export default function LoginScreen({ navigation }: Props) {
   const [error, setError] = useState('');
 
   const handleSendOTP = async () => {
-    if (!phone.trim()) { setError('Please enter a phone number'); return; }
+    const validationError = validatePhone(phone, countryCode);
+    if (validationError) { setError(t(validationError)); return; }
     setLoading(true);
     setError('');
     try {
-      await api.register({ phone: `${countryCode}${phone.replace(/^0/, '')}`, country_code: countryCode, language: 'lo' });
+      await api.register({ phone: normalizePhone(phone, countryCode), country_code: countryCode, language: 'lo' });
       navigation.navigate('OTP', { phone, countryCode });
     } catch (e: any) {
       setError(e?.response?.data?.message || t('common.error'));

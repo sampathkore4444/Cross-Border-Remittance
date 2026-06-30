@@ -35,7 +35,7 @@ export default function OTPScreen({ route, navigation }: Props) {
 
   const handleVerify = async (code?: string) => {
     const fullOtp = code || otp.join('');
-    if (fullOtp.length !== 6) return;
+    if (fullOtp.length !== 6) { setError(t('validation.otpInvalid')); return; }
     setLoading(true);
     setError('');
     try {

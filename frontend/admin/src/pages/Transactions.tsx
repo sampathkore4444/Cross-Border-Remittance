@@ -1,21 +1,66 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import api from '../api/client';
 
-const allTxs = Array.from({ length: 20 }, (_, i) => ({
-  ref: `TXN-${String(i + 1).padStart(3, '0')}`,
-  sender: ['Khammany', 'Nee', 'Sompong', 'Bounmy'][i % 4],
-  recipient: ['Mae', 'Mom', 'Wife', 'Friend'][i % 4],
-  amount: `${(Math.floor(Math.random() * 10) + 1) * 1000} THB`,
-  targetAmount: `${(Math.floor(Math.random() * 50) + 10) * 100000} LAK`,
-  status: ['Completed', 'Pending', 'Failed', 'Refunded'][i % 4],
-  method: ['PromptPay QR', 'Bank Transfer', 'TrueMoney', 'Agent Cash'][i % 4],
-  payout: ['BCEL Cash', '7-Eleven', 'Mobile Top-Up', 'Agent Cash'][i % 4],
-  time: `${Math.floor(Math.random() * 24)} hours ago`,
-}));
+interface TransactionRow {
+  ref: string;
+  sender: string;
+  recipient: string;
+  amount: string;
+  targetAmount: string;
+  status: string;
+  method: string;
+  payout: string;
+  time: string;
+}
 
 export default function Transactions() {
   const [filter, setFilter] = useState('all');
+  const [rows, setRows] = useState<TransactionRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const filtered = filter === 'all' ? allTxs : allTxs.filter(tx => tx.status.toLowerCase() === filter);
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    api.get('/v1/admin/transactions')
+      .then((res) => {
+        if (!mounted) return;
+        const txns = Array.isArray(res.data) ? res.data : [];
+        setRows(txns.map((tx: any, i: number) => ({
+          ref: tx.transaction_ref || `TXN-${String(i + 1).padStart(3, '0')}`,
+          sender: tx.sender_id?.slice(0, 8) ?? `User ${i + 1}`,
+          recipient: tx.recipient_name || `Recipient ${i + 1}`,
+          amount: `${(tx.source_amount ?? 0).toLocaleString()} ${tx.source_currency || 'THB'}`,
+          targetAmount: `${(tx.target_amount ?? 0).toLocaleString()} ${tx.target_currency || 'LAK'}`,
+          status: tx.payout_status || tx.payment_status || 'pending',
+          method: tx.payment_method || '—',
+          payout: tx.payout_method || '—',
+          time: tx.created_at ? new Date(tx.created_at).toLocaleString() : '—',
+        })));
+      })
+      .catch(() => {
+        if (!mounted) return;
+        const mock = Array.from({ length: 20 }, (_, i) => ({
+          ref: `TXN-${String(i + 1).padStart(3, '0')}`,
+          sender: ['Khammany', 'Nee', 'Sompong', 'Bounmy'][i % 4],
+          recipient: ['Mae', 'Mom', 'Wife', 'Friend'][i % 4],
+          amount: `${(Math.floor(Math.random() * 10) + 1) * 1000} THB`,
+          targetAmount: `${(Math.floor(Math.random() * 50) + 10) * 100000} LAK`,
+          status: ['Completed', 'Pending', 'Failed', 'Refunded'][i % 4],
+          method: ['PromptPay QR', 'Bank Transfer', 'TrueMoney', 'Agent Cash'][i % 4],
+          payout: ['BCEL Cash', '7-Eleven', 'Mobile Top-Up', 'Agent Cash'][i % 4],
+          time: `${Math.floor(Math.random() * 24)} hours ago`,
+        }));
+        setRows(mock);
+      })
+      .finally(() => { if (mounted) setLoading(false); });
+    return () => { mounted = false; };
+  }, []);
+
+  const filtered = filter === 'all' ? rows : rows.filter(tx => tx.status.toLowerCase() === filter);
+
+  if (loading) return <div style={{ padding: 24 }}><p>Loading transactions...</p></div>;
+  if (error) return <div style={{ padding: 24 }}><p style={{ color: '#FF3D00' }}>Error: {error}</p></div>;
 
   return (
     <div>

@@ -6,6 +6,8 @@ import { Button } from '@components/Button';
 import { Loading } from '@components/Loading';
 import { api } from '@services/api';
 import { Config } from '@constants/config';
+import { useToast } from '@components/Toast';
+import { validateAmount } from '@utils/validation';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { SendStackParamList } from '@navigation/types';
 
@@ -15,25 +17,31 @@ const SUGGESTED = [3000, 5000, 10000];
 
 export default function AmountScreen({ navigation }: Props) {
   const { t } = useTranslation();
+  const { showToast } = useToast();
   const [amount, setAmount] = useState('');
   const [rate, setRate] = useState(575);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     api.getQuote({ source_amount: 5000, source_currency: 'THB', target_currency: 'LAK', payout_method: 'bcel_cash', recipient_phone: '' })
-      .then(q => setRate(q.exchange_rate)).catch(() => { }).finally(() => setLoading(false));
-  }, []);
+      .then(q => setRate(q.exchange_rate)).catch(() => {
+        showToast(t('common.networkError'), 'info');
+      }).finally(() => setLoading(false));
+  }, [showToast, t]);
 
   const numAmount = parseFloat(amount) || 0;
   const targetAmount = Math.round(numAmount * rate);
   const formattedTarget = targetAmount.toLocaleString();
 
   const handleNext = async () => {
-    if (numAmount <= 0) return;
+    const amountError = validateAmount(numAmount);
+    if (amountError) { showToast(t(amountError), 'error'); return; }
     try {
       const quote = await api.getQuote({ source_amount: numAmount, source_currency: 'THB', target_currency: 'LAK', payout_method: 'bcel_cash', recipient_phone: '' });
       navigation.navigate('Recipient', { quote });
-    } catch { }
+    } catch {
+      showToast(t('common.networkError'), 'error');
+    }
   };
 
   if (loading) return <Loading fullScreen />;

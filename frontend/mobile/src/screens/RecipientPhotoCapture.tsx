@@ -1,18 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Colors } from '@constants/colors';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { api } from '@services/api';
+import { useToast } from '@components/Toast';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '@navigation/types';
 
-interface Props {
-  onCapture: (photoUri: string) => void;
-  onClose: () => void;
-}
+type Props = NativeStackScreenProps<RootStackParamList, 'PhotoCapture'>;
 
-export default function RecipientPhotoCapture({ onCapture, onClose }: Props) {
+export default function RecipientPhotoCapture({ route, navigation }: Props) {
+  const { transactionRef } = route.params;
   const { t } = useTranslation();
+  const { showToast } = useToast();
   const [permission, requestPermission] = useCameraPermissions();
   const [photo, setPhoto] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const cameraRef = useRef<CameraView>(null);
 
   useEffect(() => {
@@ -21,6 +26,13 @@ export default function RecipientPhotoCapture({ onCapture, onClose }: Props) {
     }
   }, [permission]);
 
+  useEffect(() => {
+    const unsub = api.onUploadProgress((pct: number) => {
+      setUploadProgress(pct);
+    });
+    return unsub;
+  }, []);
+
   const takePhoto = async () => {
     if (!cameraRef.current) return;
     try {
@@ -28,15 +40,27 @@ export default function RecipientPhotoCapture({ onCapture, onClose }: Props) {
       if (result?.uri) {
         setPhoto(result.uri);
       }
-    } catch {}
+    } catch { }
   };
 
-  const confirmPhoto = () => {
-    if (photo) onCapture(photo);
+  const confirmPhoto = async () => {
+    if (!photo) return;
+    setUploading(true);
+    setUploadProgress(0);
+    try {
+      await api.uploadPhoto(photo, transactionRef);
+      showToast(t('photoUpload.uploadSuccess'), 'success');
+      navigation.goBack();
+    } catch {
+      showToast(t('photoUpload.uploadError'), 'error');
+    } finally {
+      setUploading(false);
+    }
   };
 
   const retakePhoto = () => {
     setPhoto(null);
+    setUploadProgress(0);
   };
 
   if (!permission?.granted) {
@@ -45,9 +69,9 @@ export default function RecipientPhotoCapture({ onCapture, onClose }: Props) {
         <View style={styles.centered}>
           <Text style={styles.permissionText}>{t('common.loading')}</Text>
           <TouchableOpacity style={styles.button} onPress={requestPermission}>
-            <Text style={styles.buttonText}>Grant Camera Permission</Text>
+            <Text style={styles.buttonText}>{t('photoUpload.grantCamera')}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
+          <TouchableOpacity style={styles.cancelButton} onPress={() => navigation.goBack()}>
             <Text style={styles.cancelText}>{t('common.cancel')}</Text>
           </TouchableOpacity>
         </View>
@@ -60,15 +84,22 @@ export default function RecipientPhotoCapture({ onCapture, onClose }: Props) {
       <SafeAreaView style={styles.container}>
         <View style={styles.previewContainer}>
           <Image source={{ uri: photo }} style={styles.preview} />
-          <Text style={styles.hint}>Recipient photo captured</Text>
-          <View style={styles.previewButtons}>
-            <TouchableOpacity style={styles.retakeButton} onPress={retakePhoto}>
-              <Text style={styles.retakeText}>Retake</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.confirmButton} onPress={confirmPhoto}>
-              <Text style={styles.confirmText}>Confirm</Text>
-            </TouchableOpacity>
-          </View>
+          <Text style={styles.hint}>{t('photoUpload.captured')}</Text>
+          {uploading ? (
+            <View style={styles.uploadingRow}>
+              <ActivityIndicator color={Colors.primary} />
+              <Text style={styles.uploadingText}>{t('photoUpload.uploading')} {uploadProgress}%</Text>
+            </View>
+          ) : (
+            <View style={styles.previewButtons}>
+              <TouchableOpacity style={styles.retakeButton} onPress={retakePhoto} disabled={uploading}>
+                <Text style={styles.retakeText}>{t('photoUpload.retake')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.confirmButton} onPress={confirmPhoto} disabled={uploading}>
+                <Text style={styles.confirmText}>{t('photoUpload.confirm')}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </SafeAreaView>
     );
@@ -78,13 +109,13 @@ export default function RecipientPhotoCapture({ onCapture, onClose }: Props) {
     <SafeAreaView style={styles.container}>
       <CameraView ref={cameraRef} style={StyleSheet.absoluteFillObject} facing="front" />
       <View style={styles.overlay}>
-        <Text style={styles.overlayText}>Take recipient photo</Text>
+        <Text style={styles.overlayText}>{t('photoUpload.takePhoto')}</Text>
         <TouchableOpacity style={styles.shutterButton} onPress={takePhoto}>
           <View style={styles.shutterInner} />
         </TouchableOpacity>
       </View>
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
+        <TouchableOpacity style={styles.cancelButton} onPress={() => navigation.goBack()}>
           <Text style={styles.cancelText}>{t('common.cancel')}</Text>
         </TouchableOpacity>
       </View>
@@ -113,4 +144,6 @@ const styles = StyleSheet.create({
   footer: { padding: 24, alignItems: 'center' },
   cancelButton: { padding: 12 },
   cancelText: { fontSize: 16, color: Colors.textOnPrimary, fontWeight: '600' },
+  uploadingRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16 },
+  uploadingText: { fontSize: 14, color: Colors.textOnPrimary, fontWeight: '600' },
 });

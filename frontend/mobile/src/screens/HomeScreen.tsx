@@ -7,7 +7,8 @@ import { Avatar } from '@components/Avatar';
 import { Button } from '@components/Button';
 import { Loading } from '@components/Loading';
 import { api } from '@services/api';
-import type { Transaction } from '@types/api';
+import { useToast } from '@components/Toast';
+import type { Transaction, AutosendConfig } from '@types/api';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainTabParamList } from '@navigation/types';
 
@@ -15,22 +16,32 @@ type Props = NativeStackScreenProps<MainTabParamList, 'Home'>;
 
 export default function HomeScreen({ navigation }: Props) {
   const { t } = useTranslation();
+  const { showToast } = useToast();
   const [rate, setRate] = useState('575');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [autosendCfg, setAutosendCfg] = useState<AutosendConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
-      const [quote, history] = await Promise.all([
-        api.getQuote({ source_amount: 1000, source_currency: 'THB', target_currency: 'LAK', payout_method: 'bcel_cash', recipient_phone: '' }).catch(() => null),
-        api.getHistory(1, 5).catch(() => ({ transactions: [] })),
+      const [quote, history, autosend] = await Promise.all([
+        api.getQuote({ source_amount: 1000, source_currency: 'THB', target_currency: 'LAK', payout_method: 'bcel_cash', recipient_phone: '' }).catch(() => {
+          showToast(t('common.networkError'), 'info');
+          return null;
+        }),
+        api.getHistory(1, 5).catch(() => {
+          showToast(t('common.networkError'), 'info');
+          return { transactions: [] };
+        }),
+        api.getAutosendConfig().catch(() => null),
       ]);
       if (quote) setRate(quote.exchange_rate.toString());
       setTransactions(history.transactions);
+      setAutosendCfg(autosend);
     } catch { }
     finally { setLoading(false); setRefreshing(false); }
-  }, []);
+  }, [showToast, t]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -43,10 +54,22 @@ export default function HomeScreen({ navigation }: Props) {
           <Text style={styles.rateLabel}>{t('home.rate', { rate })}</Text>
           <Text style={styles.rateSubtext}>{t('common.loading')}</Text>
         </View>
-        <TouchableOpacity style={styles.autosendBanner} activeOpacity={0.8} onPress={() => (navigation as any).navigate('AutosendSettings')}>
-          <Text style={styles.autosendText}>{t('home.autosend', { date: 'Jun 30', amount: '2,000' })}</Text>
-          <Text style={styles.autosendArrow}>→</Text>
-        </TouchableOpacity>
+        {autosendCfg?.enabled && autosendCfg.next_send_at ? (
+          <TouchableOpacity style={styles.autosendBanner} activeOpacity={0.8} onPress={() => (navigation as any).navigate('AutosendSettings')}>
+            <Text style={styles.autosendText}>
+              {t('home.autosend', {
+                date: new Date(autosendCfg.next_send_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                amount: autosendCfg.amount.toLocaleString(),
+              })}
+            </Text>
+            <Text style={styles.autosendArrow}>→</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity style={styles.autosendBanner} activeOpacity={0.8} onPress={() => (navigation as any).navigate('AutosendSettings')}>
+            <Text style={styles.autosendText}>{t('home.autosend', { date: '—', amount: '0' })}</Text>
+            <Text style={styles.autosendArrow}>→</Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity style={styles.sendCard} activeOpacity={0.9} onPress={() => (navigation as any).navigate('Send', { screen: 'Amount' })}>
           <Text style={styles.sendTitle}>{t('home.sendToLaos')}</Text>
           <Text style={styles.sendArrow}>→</Text>

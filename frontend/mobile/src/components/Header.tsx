@@ -10,9 +10,9 @@ interface HeaderProps {
 
 export function Header({ title, onBack, rightAction }: HeaderProps) {
   return (
-    <View style={styles.container}>
+    <View style={styles.container} accessible accessibilityRole="header" accessibilityLabel={title}>
       {onBack ? (
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
+        <TouchableOpacity onPress={onBack} style={styles.backButton} accessibilityRole="button" accessibilityLabel="Go back" accessibilityHint="Navigates to the previous screen">
           <Text style={styles.backText}>←</Text>
         </TouchableOpacity>
       ) : (

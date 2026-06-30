@@ -12,7 +12,7 @@ export function Avatar({ name, size = 48 }: AvatarProps) {
   const bgColors = [Colors.primary, Colors.secondary, Colors.accent, '#7C3AED', '#EC4899', '#14B8A6'];
   const colorIndex = name.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) % bgColors.length;
   return (
-    <View style={[styles.container, { width: size, height: size, borderRadius: size / 2, backgroundColor: bgColors[colorIndex] }]}>
+    <View style={[styles.container, { width: size, height: size, borderRadius: size / 2, backgroundColor: bgColors[colorIndex] }]} accessibilityRole="image" accessibilityLabel={`Avatar for ${name}`}>
       <Text style={[styles.text, { fontSize: size * 0.4 }]}>{initials}</Text>
     </View>
   );

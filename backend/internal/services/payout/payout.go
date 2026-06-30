@@ -162,19 +162,35 @@ func (s *Service) handlePayoutFailure(ctx context.Context, tx *core.Transaction,
 }
 
 func (s *Service) callBCELAPI(ctx context.Context, payload map[string]interface{}) (map[string]interface{}, error) {
+	if !s.cfg.BankAPIMockMode {
+		return s.callRealBankAPI(ctx, "BCEL", payload)
+	}
 	return map[string]interface{}{"transaction_id": "BCEL-" + payload["pickup_code"].(string)}, nil
 }
 
 func (s *Service) callTelcoAPI(ctx context.Context, phone string, amount int64) (map[string]interface{}, error) {
+	if !s.cfg.BankAPIMockMode {
+		return s.callRealBankAPI(ctx, "TELCO", map[string]interface{}{"phone": phone, "amount": amount})
+	}
 	return map[string]interface{}{"transaction_id": "TELCO-" + phone}, nil
 }
 
 func (s *Service) callSevenElevenAPI(ctx context.Context, payload map[string]interface{}) (map[string]interface{}, error) {
+	if !s.cfg.BankAPIMockMode {
+		return s.callRealBankAPI(ctx, "7ELEVEN", payload)
+	}
 	return map[string]interface{}{"id": "7ELEVEN-" + payload["pickup_code"].(string)}, nil
 }
 
 func (s *Service) callBCELWalletAPI(ctx context.Context, phone string, amount int64) (map[string]interface{}, error) {
+	if !s.cfg.BankAPIMockMode {
+		return s.callRealBankAPI(ctx, "BCELW", map[string]interface{}{"phone": phone, "amount": amount})
+	}
 	return map[string]interface{}{"ref": "BCELW-" + phone}, nil
+}
+
+func (s *Service) callRealBankAPI(ctx context.Context, provider string, payload map[string]interface{}) (map[string]interface{}, error) {
+	return nil, fmt.Errorf("%s API not configured", provider)
 }
 
 func generatePickupCode() string {

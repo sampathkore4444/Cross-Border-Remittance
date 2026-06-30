@@ -28,6 +28,42 @@ export type RootStackParamList = {
   TransactionDetail: { ref: string };
   AgentDashboard: undefined;
   AutosendSettings: undefined;
+  QRScanner: { transactionRef: string };
+  PhotoCapture: { transactionRef: string };
+  Terms: undefined;
+  Privacy: undefined;
+};
+
+export type LinkingConfig = {
+  screens: {
+    TransactionDetail: 'transaction/:ref';
+    Main: { screens: { Home: 'home'; History: 'history'; Profile: 'profile' } };
+    Send: { screens: { Amount: 'send'; Success: 'send/success/:transactionRef' } };
+  };
+};
+
+export const linking = {
+  prefixes: ['ngoensai://', 'https://ngoensai.com'],
+  config: {
+    screens: {
+      TransactionDetail: 'transaction/:ref',
+      Main: {
+        screens: {
+          Home: 'home',
+          History: 'history',
+          Profile: 'profile',
+        },
+      },
+      Send: {
+        screens: {
+          Amount: 'send',
+          Success: 'send/success/:transactionRef',
+        },
+      },
+      Terms: 'terms',
+      Privacy: 'privacy',
+    },
+  } as LinkingConfig,
 };
 
 declare global {

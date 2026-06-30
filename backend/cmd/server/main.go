@@ -1,11 +1,13 @@
 package main
 
 import (
+	"database/sql"
 	"log"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ngoensai/backend/config"
 	"github.com/ngoensai/backend/internal/common/middleware"
+	"github.com/ngoensai/backend/internal/migrations"
 	"github.com/ngoensai/backend/internal/repositories"
 	"github.com/ngoensai/backend/internal/routes"
 	"github.com/ngoensai/backend/internal/services/agent"
@@ -22,10 +24,27 @@ import (
 
 func main() {
 	cfg := config.Load()
-	pg, err := repositories.NewPostgres(cfg.DatabaseURL)
-	if err != nil {
-		log.Fatalf("postgres: %v", err)
+
+	var pg repositories.Store
+	if realPG, err := repositories.NewRealPostgres(cfg.DatabaseURL); err == nil {
+		log.Println("connected to real postgresql")
+		pg = realPG
+		if db, ok := pg.Pool().(*sql.DB); ok {
+			migrator := migrations.NewRunner(db)
+			if err := migrator.Run("migrations"); err != nil {
+				log.Fatalf("migrations: %v", err)
+			}
+		}
+	} else {
+		log.Printf("real postgres not available (%v), falling back to in-memory store", err)
+		memPG, memErr := repositories.NewPostgres(cfg.DatabaseURL)
+		if memErr != nil {
+			log.Fatalf("in-memory store: %v", memErr)
+		}
+		pg = memPG
+		log.Println("in-memory mode — skipping migrations")
 	}
+
 	redis, err := repositories.NewRedis(cfg.RedisURL)
 	if err != nil {
 		log.Fatalf("redis: %v", err)

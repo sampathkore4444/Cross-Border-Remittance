@@ -101,10 +101,30 @@ export interface Transaction {
   pickup_code?: string;
 }
 
+export interface Recipient {
+  phone: string;
+  name: string;
+  province?: string;
+  relationship?: string;
+}
+
 export interface User {
   id: string;
   phone: string;
   name: string;
   kyc_level: string;
   language: string;
+}
+
+export interface AutosendConfig {
+  enabled: boolean;
+  amount: number;
+  frequency: 'weekly' | 'biweekly' | 'monthly';
+  recipient_id: string;
+  recipient_name: string;
+  next_send_at: string;
+}
+
+export interface UploadPhotoResponse {
+  url: string;
 }

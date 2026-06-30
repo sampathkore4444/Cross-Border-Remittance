@@ -47,7 +47,7 @@ func (s *Service) SendOTP(ctx context.Context, phone string) error {
 		return fmt.Errorf("generate otp: %w", err)
 	}
 	if s.cfg.SandboxMode {
-		code = "999999"
+		code = s.cfg.OTPOverride
 	}
 	s.redis.Set(ctx, key, code, 5*time.Minute)
 	s.redis.Set(ctx, fmt.Sprintf("otp_attempts:%s", phone), 0, 1*time.Hour)

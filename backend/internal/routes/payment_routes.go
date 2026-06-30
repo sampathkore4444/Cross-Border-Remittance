@@ -18,6 +18,8 @@ type PaymentService interface {
 	ConfirmPayment(ctx context.Context, ref, providerRef string) error
 	ListTransactions(ctx context.Context, senderID string, page, limit int) ([]core.Transaction, int, error)
 	GetTransaction(ctx context.Context, ref string) (*core.Transaction, error)
+	ListRecipients(ctx context.Context, userID string) ([]core.RecipientProfile, error)
+	SaveRecipient(ctx context.Context, userID string, r core.RecipientProfile) error
 }
 
 type PaymentAuthService interface {
@@ -100,6 +102,35 @@ func RegisterPayment(r *gin.Engine, paySvc PaymentService, authSvc PaymentAuthSe
 				return
 			}
 			c.JSON(http.StatusOK, tx)
+		})
+		g.POST("/recipients", func(c *gin.Context) {
+			user := c.MustGet("user").(*core.User)
+			var r schemas.RecipientRequest
+			if err := c.ShouldBindJSON(&r); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+			profile := core.RecipientProfile{
+				Phone:        r.Phone,
+				Name:         r.Name,
+				Province:     r.Province,
+				Relationship: r.Relationship,
+			}
+			if err := paySvc.SaveRecipient(c.Request.Context(), user.ID, profile); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusCreated, gin.H{"message": "recipient saved"})
+		})
+
+		g.GET("/recipients", func(c *gin.Context) {
+			user := c.MustGet("user").(*core.User)
+			recipients, err := paySvc.ListRecipients(c.Request.Context(), user.ID)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{"recipients": recipients})
 		})
 	}
 }

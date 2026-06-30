@@ -11,12 +11,18 @@ interface InputProps extends TextInputProps {
 export function Input({ label, error, prefix, style, ...props }: InputProps) {
   return (
     <View style={styles.container}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label && <Text style={styles.label} accessibilityRole="text">{label}</Text>}
       <View style={[styles.inputWrapper, error && styles.inputError]}>
         {prefix && <Text style={styles.prefix}>{prefix}</Text>}
-        <TextInput style={[styles.input, prefix && styles.inputWithPrefix, style]} placeholderTextColor={Colors.textLight} {...props} />
+        <TextInput
+          style={[styles.input, prefix && styles.inputWithPrefix, style]}
+          placeholderTextColor={Colors.textLight}
+          accessibilityLabel={label || props.placeholder || 'Input'}
+          accessibilityRole="none"
+          {...props}
+        />
       </View>
-      {error && <Text style={styles.error}>{error}</Text>}
+      {error && <Text style={styles.error} accessibilityRole="alert">{error}</Text>}
     </View>
   );
 }

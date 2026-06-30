@@ -9,7 +9,7 @@ interface LoadingProps {
 
 export function Loading({ message, fullScreen }: LoadingProps) {
   return (
-    <View style={[styles.container, fullScreen && styles.fullScreen]}>
+    <View style={[styles.container, fullScreen && styles.fullScreen]} accessible accessibilityLabel={message || 'Loading'} accessibilityRole="none">
       <ActivityIndicator size="large" color={Colors.primary} />
       {message && <Text style={styles.message}>{message}</Text>}
     </View>

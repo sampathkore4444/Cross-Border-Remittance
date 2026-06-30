@@ -1,6 +1,9 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { Config } from '../constants/config';
+import { getCached, setCache } from './cache';
+import { enqueueRequest, getQueue, dequeueRequest, incrementRetry } from './offline';
+import { analytics } from './analytics';
 import type {
   RegisterRequest,
   VerifyRequest,
@@ -10,11 +13,15 @@ import type {
   SendRequest,
   SendResponse,
   Transaction,
+  Recipient,
+  AutosendConfig,
+  UploadPhotoResponse,
 } from '../types/api';
 
 class ApiService {
   client: AxiosInstance;
   private _demoMode = false;
+  private _isProcessingQueue = false;
 
   constructor() {
     this.client = axios.create({
@@ -33,9 +40,27 @@ class ApiService {
     });
 
     this.client.interceptors.response.use(
-      (res) => res,
+      (res) => {
+        if (res.config.method === 'get' && res.status === 200) {
+          const url = res.config.url || '';
+          setCache(url, res.data, 60 * 1000);
+        }
+        return res;
+      },
       async (error) => {
         if (this._demoMode) return Promise.reject(error);
+        if (!error.response && error.config?.method === 'get') {
+          const cached = await getCached(error.config.url || '');
+          if (cached) return { data: cached };
+        }
+        if (!error.response && error.config?.method !== 'get') {
+          await enqueueRequest({
+            method: error.config.method.toUpperCase() as 'POST' | 'PUT' | 'DELETE',
+            url: error.config.url || '',
+            data: error.config.data ? JSON.parse(error.config.data) : undefined,
+          });
+        }
+        analytics.trackError(error);
         if (error.response?.status === 401) {
           const refreshed = await this.tryRefreshToken();
           if (refreshed) {
@@ -51,6 +76,33 @@ class ApiService {
 
   enableDemoMode() {
     this._demoMode = true;
+  }
+
+  async processOfflineQueue(): Promise<void> {
+    if (this._isProcessingQueue || this._demoMode) return;
+    this._isProcessingQueue = true;
+    try {
+      const queue = await getQueue();
+      for (const req of queue) {
+        if (req.retryCount >= Config.MAX_RETRY_ATTEMPTS) {
+          await dequeueRequest(req.id);
+          continue;
+        }
+        try {
+          await this.client.request({
+            method: req.method,
+            url: req.url,
+            data: req.data,
+            headers: req.headers,
+          });
+          await dequeueRequest(req.id);
+        } catch {
+          await incrementRetry(req.id);
+        }
+      }
+    } finally {
+      this._isProcessingQueue = false;
+    }
   }
 
   // Auth
@@ -151,12 +203,91 @@ class ApiService {
     return res.data;
   }
 
+  // Recipients
+  async getRecipients(): Promise<Recipient[]> {
+    if (this._demoMode) {
+      return [
+        { phone: '8562055551234', name: 'Mae', province: 'Savannakhet', relationship: 'Mother' },
+        { phone: '8562066668888', name: 'Bounmy', province: 'Vientiane', relationship: 'Son' },
+      ];
+    }
+    const res = await this.client.get('/recipients');
+    return res.data.recipients;
+  }
+
+  async saveRecipient(data: Recipient): Promise<void> {
+    if (this._demoMode) return;
+    await this.client.post('/recipients', data);
+  }
+
   async getTransaction(ref: string): Promise<Transaction> {
     if (this._demoMode) {
       return { transaction_ref: ref, source_amount: 5000, source_currency: 'THB', target_amount: 6250, target_currency: 'LAK', exchange_rate: 1.25, recipient_name: 'Souliphone Chanthavong', recipient_phone: '856209876543', status: 'completed', created_at: new Date(Date.now() - 86400000).toISOString(), paid_at: new Date(Date.now() - 82800000).toISOString(), completed_at: new Date(Date.now() - 81000000).toISOString(), picked_up_at: new Date(Date.now() - 80000000).toISOString(), pickup_code: 'LAO-8421' };
     }
     const res = await this.client.get(`/transactions/${ref}`);
     return res.data;
+  }
+
+  // Autosend
+  async getAutosendConfig(): Promise<AutosendConfig> {
+    if (this._demoMode) {
+      const nextSend = new Date(Date.now() + 7 * 86400000).toISOString();
+      return {
+        enabled: true,
+        amount: 2000,
+        frequency: 'weekly',
+        recipient_id: 'demo-recipient-001',
+        recipient_name: 'Mae',
+        next_send_at: nextSend,
+      };
+    }
+    const res = await this.client.get('/autosend');
+    return res.data;
+  }
+
+  async saveAutosendConfig(data: Omit<AutosendConfig, 'next_send_at'>): Promise<AutosendConfig> {
+    if (this._demoMode) {
+      const nextSend = new Date(Date.now() + 7 * 86400000).toISOString();
+      return { ...data, next_send_at: nextSend };
+    }
+    const res = await this.client.post('/autosend', data);
+    return res.data;
+  }
+
+  // Photo upload
+  async uploadPhoto(uri: string, transactionRef: string): Promise<UploadPhotoResponse> {
+    if (this._demoMode) {
+      return { url: 'https://via.placeholder.com/300' };
+    }
+    const formData = new FormData();
+    const filename = uri.split('/').pop() || 'photo.jpg';
+    const match = /\.(\w+)$/.exec(filename);
+    const ext = match ? match[1] : 'jpg';
+    formData.append('photo', {
+      uri,
+      name: `receipt_${transactionRef}.${ext}`,
+      type: `image/${ext === 'jpg' ? 'jpeg' : ext}`,
+    } as any);
+    formData.append('transaction_ref', transactionRef);
+    const res = await this.client.post('/photos/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: (progressEvent) => {
+        if (progressEvent.total) {
+          const pct = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          this._uploadProgressListeners.forEach((fn) => fn(pct));
+        }
+      },
+    });
+    return res.data;
+  }
+
+  private _uploadProgressListeners: Array<(pct: number) => void> = [];
+
+  onUploadProgress(fn: (pct: number) => void) {
+    this._uploadProgressListeners.push(fn);
+    return () => {
+      this._uploadProgressListeners = this._uploadProgressListeners.filter((f) => f !== fn);
+    };
   }
 }
 

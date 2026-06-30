@@ -22,6 +22,7 @@ type Postgres struct {
 	recons       map[string]*core.TreasuryReconciliation
 	amlChecks    []core.AMLCheck
 	autosends    map[string]*core.Autosend
+	recipients   map[string][]*core.RecipientProfile
 
 	nextID int64
 }
@@ -35,6 +36,7 @@ func NewPostgres(dsn string) (*Postgres, error) {
 		agentsByUser: make(map[string]*core.Agent),
 		recons:       make(map[string]*core.TreasuryReconciliation),
 		autosends:    make(map[string]*core.Autosend),
+		recipients:   make(map[string][]*core.RecipientProfile),
 	}, nil
 }
 
@@ -462,6 +464,33 @@ func (p *Postgres) CreateAutosend(ctx context.Context, a *core.Autosend) error {
 	a.IsActive = true
 	p.autosends[a.ID] = a
 	return nil
+}
+
+// ── Recipient ──
+
+func (p *Postgres) CreateRecipient(ctx context.Context, r *core.RecipientProfile) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if r.ID == "" {
+		r.ID = p.nextIDStr("REC")
+	}
+	r.CreatedAt = time.Now()
+	p.recipients[r.CreatedBy] = append(p.recipients[r.CreatedBy], r)
+	return nil
+}
+
+func (p *Postgres) ListRecipients(ctx context.Context, userID string) ([]core.RecipientProfile, error) {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	recs := p.recipients[userID]
+	if len(recs) == 0 {
+		return []core.RecipientProfile{}, nil
+	}
+	result := make([]core.RecipientProfile, len(recs))
+	for i, r := range recs {
+		result[i] = *r
+	}
+	return result, nil
 }
 
 func (p *Postgres) GetUserCount(ctx context.Context) (int, error) {

@@ -19,6 +19,8 @@ type Repository interface {
 	UpdatePaymentStatus(ctx context.Context, ref string, status core.PaymentStatus, paidAt time.Time, payRef string) error
 	ListTransactions(ctx context.Context, senderID string, page, limit int) ([]core.Transaction, int, error)
 	GetTransactionByIdempotency(ctx context.Context, key string) (*core.Transaction, error)
+	CreateRecipient(ctx context.Context, r *core.RecipientProfile) error
+	ListRecipients(ctx context.Context, userID string) ([]core.RecipientProfile, error)
 }
 
 type FXService interface {
@@ -135,6 +137,15 @@ func (s *Service) ListTransactions(ctx context.Context, senderID string, page, l
 
 func (s *Service) GetTransaction(ctx context.Context, ref string) (*core.Transaction, error) {
 	return s.repo.GetTransaction(ctx, ref)
+}
+
+func (s *Service) ListRecipients(ctx context.Context, userID string) ([]core.RecipientProfile, error) {
+	return s.repo.ListRecipients(ctx, userID)
+}
+
+func (s *Service) SaveRecipient(ctx context.Context, userID string, r core.RecipientProfile) error {
+	r.CreatedBy = userID
+	return s.repo.CreateRecipient(ctx, &r)
 }
 
 func (s *Service) generatePromptPayQR(ctx context.Context, amount float64, ref string) (string, time.Time, error) {

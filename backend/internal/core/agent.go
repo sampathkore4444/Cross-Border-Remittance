@@ -12,6 +12,9 @@ const (
 type Agent struct {
 	ID           string    `json:"id"`
 	UserID       string    `json:"user_id"`
+	Name         string    `json:"name"`
+	Phone        string    `json:"phone"`
+	Province     string    `json:"province"`
 	ShopName     string    `json:"shop_name"`
 	ShopAddress  string    `json:"shop_address,omitempty"`
 	ShopProvince string    `json:"shop_province"`

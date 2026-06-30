@@ -56,6 +56,13 @@ type PaymentInfo struct {
 	ExpiresAt string  `json:"expires_at"`
 }
 
+type RecipientRequest struct {
+	Phone        string `json:"phone" binding:"required"`
+	Name         string `json:"name" binding:"required"`
+	Province     string `json:"province"`
+	Relationship string `json:"relationship"`
+}
+
 type TransactionResponse struct {
 	TransactionRef string  `json:"transaction_ref"`
 	SourceAmount   float64 `json:"source_amount"`

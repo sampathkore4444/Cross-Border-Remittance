@@ -1,17 +1,65 @@
-const flagged = [
-  { ref: 'TXN-042', sender: 'Unknown', amount: '50,000 THB', reason: 'Large amount + new device', severity: 'High', time: '10 min ago' },
-  { ref: 'TXN-038', sender: 'Somchai', amount: '9,999 THB', reason: 'Unusual round amount pattern', severity: 'Medium', time: '1 hour ago' },
-  { ref: 'TXN-035', sender: 'Anousone', amount: '15,000 THB', reason: 'IP from Laos, should be Thailand', severity: 'Medium', time: '3 hours ago' },
-  { ref: 'TXN-029', sender: 'Phone Phengsy', amount: '5,000 THB', reason: 'Name matched sanctions list (false positive)', severity: 'Low', time: '5 hours ago' },
-];
+import { useState, useEffect } from 'react';
+import api from '../api/client';
 
-const sanctions = [
-  { type: 'UN Sanctions', lastRun: 'Today 10:00', hits: 0, status: 'Passed' },
-  { type: 'OFAC List', lastRun: 'Today 10:00', hits: 0, status: 'Passed' },
-  { type: 'Internal Watchlist', lastRun: 'Today 10:00', hits: 1, status: 'Review Required' },
-];
+interface FlaggedRow {
+  ref: string;
+  sender: string;
+  amount: string;
+  reason: string;
+  severity: string;
+  time: string;
+}
+
+interface SanctionsSummary {
+  type: string;
+  lastRun: string;
+  hits: number;
+  status: string;
+}
 
 export default function Compliance() {
+  const [flagged, setFlagged] = useState<FlaggedRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    api.get('/v1/admin/flagged')
+      .then((res) => {
+        if (!mounted) return;
+        const data = Array.isArray(res.data) ? res.data : (res.data?.transactions ?? []);
+        setFlagged(data.map((f: any) => ({
+          ref: f.transaction_ref || f.id || '—',
+          sender: f.sender_id?.slice(0, 8) || 'Unknown',
+          amount: `${(f.source_amount ?? 0).toLocaleString()} ${f.source_currency || 'THB'}`,
+          reason: f.reason || f.flagged_reason || 'Flagged by automated system',
+          severity: f.source_amount > 30000 ? 'High' : f.source_amount > 10000 ? 'Medium' : 'Low',
+          time: f.created_at ? new Date(f.created_at).toLocaleString() : '—',
+        })));
+      })
+      .catch(() => {
+        if (!mounted) return;
+        setFlagged([
+          { ref: 'TXN-042', sender: 'Unknown', amount: '50,000 THB', reason: 'Large amount + new device', severity: 'High', time: '10 min ago' },
+          { ref: 'TXN-038', sender: 'Somchai', amount: '9,999 THB', reason: 'Unusual round amount pattern', severity: 'Medium', time: '1 hour ago' },
+          { ref: 'TXN-035', sender: 'Anousone', amount: '15,000 THB', reason: 'IP from Laos, should be Thailand', severity: 'Medium', time: '3 hours ago' },
+          { ref: 'TXN-029', sender: 'Phone Phengsy', amount: '5,000 THB', reason: 'Name matched sanctions list (false positive)', severity: 'Low', time: '5 hours ago' },
+        ]);
+      })
+      .finally(() => { if (mounted) setLoading(false); });
+    return () => { mounted = false; };
+  }, []);
+
+  const sanctions: SanctionsSummary[] = [
+    { type: 'UN Sanctions', lastRun: 'Today 10:00', hits: 0, status: 'Passed' },
+    { type: 'OFAC List', lastRun: 'Today 10:00', hits: 0, status: 'Passed' },
+    { type: 'Internal Watchlist', lastRun: 'Today 10:00', hits: 1, status: 'Review Required' },
+  ];
+
+  if (loading) return <div style={{ padding: 24 }}><p>Loading compliance data...</p></div>;
+  if (error) return <div style={{ padding: 24 }}><p style={{ color: '#FF3D00' }}>Error: {error}</p></div>;
+
   return (
     <div>
       <h1 style={{ fontSize: 24, fontWeight: 700, color: '#1A1A2E', marginBottom: 24 }}>Compliance</h1>

@@ -1,6 +1,9 @@
 package config
 
-import "os"
+import (
+	"fmt"
+	"os"
+)
 
 type Config struct {
 	Port        string
@@ -38,7 +41,11 @@ type Config struct {
 
 	FXUpdateInterval string
 	FXSpreadLAK      float64
+	FXBaseRate       float64
+	FXRateVariance   float64
 	SandboxMode      bool
+	OTPOverride      string
+	BankAPIMockMode  bool
 }
 
 func Load() *Config {
@@ -72,7 +79,11 @@ func Load() *Config {
 
 		FXUpdateInterval: getEnv("FX_UPDATE_INTERVAL", "15m"),
 		FXSpreadLAK:      3.0,
+		FXBaseRate:       getEnvAsFloat("FX_BASE_RATE", 575.0),
+		FXRateVariance:   getEnvAsFloat("FX_RATE_VARIANCE", 6.0),
 		SandboxMode:      getEnv("SANDBOX", "true") == "true",
+		OTPOverride:      getEnv("OTP_OVERRIDE", "999999"),
+		BankAPIMockMode:  getEnv("BANK_API_MOCK", "true") == "true",
 	}
 }
 
@@ -81,4 +92,16 @@ func getEnv(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+func getEnvAsFloat(key string, fallback float64) float64 {
+	v := os.Getenv(key)
+	if v == "" {
+		return fallback
+	}
+	var f float64
+	if _, err := fmt.Sscanf(v, "%f", &f); err != nil {
+		return fallback
+	}
+	return f
 }
