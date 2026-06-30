@@ -163,6 +163,18 @@ export async function fetchUsers(page = 1, limit = 20): Promise<UserResponse> {
   return data;
 }
 
+export interface UserDetailResponse {
+  user: any;
+  kyc_documents: any[];
+  transactions: any[];
+  agent: any | null;
+}
+
+export async function fetchUserDetail(id: string): Promise<UserDetailResponse> {
+  const { data } = await api.get(`/v1/admin/users/${id}`);
+  return data;
+}
+
 export async function updateUserStatus(id: string, isActive: boolean): Promise<{ status: string }> {
   const { data } = await api.put(`/v1/admin/users/${id}/status`, { is_active: isActive });
   return data;
@@ -286,6 +298,13 @@ export interface HealthStatus {
 
 export async function fetchHealth(): Promise<HealthStatus> {
   const { data } = await api.get('/v1/admin/health');
+  return data;
+}
+
+// ── Notification History ──
+
+export async function fetchNotificationHistory(page = 1, limit = 50): Promise<LogResponse> {
+  const { data } = await api.get(`/v1/admin/notifications/history?page=${page}&limit=${limit}`);
   return data;
 }
 

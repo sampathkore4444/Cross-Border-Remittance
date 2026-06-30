@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import { ThemeProvider } from './auth/ThemeContext';
 import ErrorBoundary from './components/ErrorBoundary';
+import { ToastProvider } from './components/Toast';
+import SessionTimeout from './components/SessionTimeout';
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
 import Transactions from './pages/Transactions';
@@ -14,10 +16,11 @@ import WebhookLogs from './pages/WebhookLogs';
 import KycReview from './pages/KycReview';
 import AdminUsers from './pages/AdminUsers';
 import Notifications from './pages/Notifications';
+import NotificationHistory from './pages/NotificationHistory';
 import Health from './pages/Health';
 import LoginPage from './pages/LoginPage';
 
-export type Page = 'dashboard' | 'transactions' | 'treasury' | 'agents' | 'compliance' | 'users' | 'webhook_logs' | 'kyc_review' | 'admin_users' | 'notifications' | 'health';
+export type Page = 'dashboard' | 'transactions' | 'treasury' | 'agents' | 'compliance' | 'users' | 'webhook_logs' | 'kyc_review' | 'admin_users' | 'notifications' | 'notification_history' | 'health';
 
 function ProtectedLayout() {
   const { isAuthenticated, logout, role } = useAuth();
@@ -36,18 +39,21 @@ function ProtectedLayout() {
     kyc_review: <KycReview />,
     admin_users: <AdminUsers />,
     notifications: <Notifications />,
+    notification_history: <NotificationHistory />,
     health: <Health />,
   };
 
   return (
-    <div style={{ display: 'flex', height: '100vh', background: 'var(--bg-primary)' }}>
-      <Sidebar currentPage={currentPage} onNavigate={setCurrentPage} onLogout={logout} role={role} />
-      <main style={{ flex: 1, overflow: 'auto', padding: 24 }}>
-        <ErrorBoundary>
-          {pageComponents[currentPage]}
-        </ErrorBoundary>
-      </main>
-    </div>
+    <SessionTimeout>
+      <div style={{ display: 'flex', height: '100vh', background: 'var(--bg-primary)' }}>
+        <Sidebar currentPage={currentPage} onNavigate={setCurrentPage} onLogout={logout} role={role} />
+        <main style={{ flex: 1, overflow: 'auto', padding: 24 }}>
+          <ErrorBoundary>
+            {pageComponents[currentPage]}
+          </ErrorBoundary>
+        </main>
+      </div>
+    </SessionTimeout>
   );
 }
 
@@ -55,10 +61,12 @@ export default function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/*" element={<ProtectedLayout />} />
-        </Routes>
+        <ToastProvider>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/*" element={<ProtectedLayout />} />
+          </Routes>
+        </ToastProvider>
       </AuthProvider>
     </ThemeProvider>
   );

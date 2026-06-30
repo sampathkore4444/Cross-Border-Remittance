@@ -1,14 +1,18 @@
 import { useEffect, useState } from 'react';
 import { fetchAdminUsers, createAdminUser, updateAdminUser, deleteAdminUser, type AdminUser } from '../api/client';
+import { useToast } from '../components/Toast';
+import ConfirmDialog from '../components/ConfirmDialog';
 import Loading from '../components/Loading';
 
 export default function AdminUsers() {
+  const { toast } = useToast();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<AdminUser | null>(null);
   const [form, setForm] = useState({ username: '', password: '', role: 'admin' });
+  const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
 
   const load = () => {
     setLoading(true);
@@ -25,25 +29,29 @@ export default function AdminUsers() {
     try {
       if (editing) {
         await updateAdminUser(editing.id, form.password ? form : { ...form, password: undefined } as any);
+        toast('Admin user updated');
       } else {
         await createAdminUser(form.username, form.password, form.role);
+        toast('Admin user created');
       }
       setShowModal(false);
       setEditing(null);
       setForm({ username: '', password: '', role: 'admin' });
       load();
     } catch (e: any) {
-      alert(e.response?.data?.error || e.message);
+      toast(e.response?.data?.error || e.message, 'error');
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this admin user?')) return;
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
     try {
-      await deleteAdminUser(id);
+      await deleteAdminUser(deleteTarget.id);
+      toast('Admin user deleted');
+      setDeleteTarget(null);
       load();
     } catch (e: any) {
-      alert(e.response?.data?.error || e.message);
+      toast(e.response?.data?.error || e.message, 'error');
     }
   };
 
@@ -57,9 +65,15 @@ export default function AdminUsers() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <h1 style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Admin Users</h1>
-        <button onClick={() => { setEditing(null); setForm({ username: '', password: '', role: 'admin' }); setShowModal(true); }} style={{
-          padding: '10px 20px', borderRadius: 8, border: 'none', background: '#1A8CFF', color: '#FFF', fontWeight: 600, cursor: 'pointer', fontSize: 14,
-        }}>+ Add User</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={load} style={{
+            padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border-color)',
+            background: 'transparent', color: 'var(--text-primary)', fontWeight: 600, cursor: 'pointer', fontSize: 13,
+          }}>Refresh</button>
+          <button onClick={() => { setEditing(null); setForm({ username: '', password: '', role: 'admin' }); setShowModal(true); }} style={{
+            padding: '10px 20px', borderRadius: 8, border: 'none', background: '#1A8CFF', color: '#FFF', fontWeight: 600, cursor: 'pointer', fontSize: 14,
+          }}>+ Add User</button>
+        </div>
       </div>
       {loading ? <Loading text="Loading admin users..." /> : error ? <ErrorState message={error} onRetry={load} /> : (
         <div style={{ background: 'var(--card-bg)', borderRadius: 12, overflow: 'hidden' }}>
@@ -90,7 +104,7 @@ export default function AdminUsers() {
                         padding: '6px 14px', borderRadius: 6, border: '1px solid var(--border-color)',
                         background: 'transparent', color: 'var(--text-primary)', fontWeight: 600, cursor: 'pointer', fontSize: 12,
                       }}>Edit</button>
-                      <button onClick={() => handleDelete(u.id)} style={{
+                      <button onClick={() => setDeleteTarget(u)} style={{
                         padding: '6px 14px', borderRadius: 6, border: 'none', background: '#C62828', color: '#FFF', fontWeight: 600, cursor: 'pointer', fontSize: 12,
                       }}>Delete</button>
                     </div>
@@ -135,6 +149,16 @@ export default function AdminUsers() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Delete Admin User"
+        message={`Permanently delete admin user "${deleteTarget?.username}"?`}
+        confirmLabel="Delete"
+        danger
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

@@ -46,15 +46,18 @@ type AdminStore interface {
 	SearchTransactions(ctx context.Context, query, senderPhone, dateFrom, dateTo string, page, limit int) ([]core.Transaction, int, error)
 	GetTransaction(ctx context.Context, ref string) (*core.Transaction, error)
 	ListTransactionLogs(ctx context.Context, ref string) ([]core.TransactionStatusLog, error)
+	ListTransactions(ctx context.Context, senderID string, page, limit int) ([]core.Transaction, int, error)
 	ListAgents(ctx context.Context, country string, page, limit int) ([]core.Agent, int, error)
 	UpdateAgentStatus(ctx context.Context, id string, isActive bool) error
 	UpdateFloat(ctx context.Context, agentID string, amount int64) error
 	AddFloatTransaction(ctx context.Context, tx *core.FloatTransaction) error
 	GetAgent(ctx context.Context, id string) (*core.Agent, error)
+	GetAgentByUserID(ctx context.Context, userID string) (*core.Agent, error)
 	ListFlaggedTransactions(ctx context.Context, status string) ([]core.Transaction, error)
 	UpdateAMLCheckStatus(ctx context.Context, id string, status string) error
 	ListUsers(ctx context.Context, page, limit int) ([]core.User, int, error)
 	UpdateUserStatus(ctx context.Context, id string, isActive bool) error
+	GetUserByID(ctx context.Context, id string) (*core.User, error)
 	ListKYCDocuments(ctx context.Context, status string, page, limit int) ([]core.KYCDocument, int, error)
 	UpdateKYCDocumentStatus(ctx context.Context, id int, status, reviewerID string) error
 	ListAdminUsers(ctx context.Context) ([]core.AdminUser, error)
@@ -114,6 +117,7 @@ func RegisterAdmin(r *gin.Engine, authSvc AdminAuthService, treasurySvc AdminTre
 		g.POST("/sanctions/check", auth, middleware.RequirePermission(core.PermManageCompliance), h.sanctionsCheck)
 
 		g.GET("/users", auth, middleware.RequirePermission(core.PermViewUsers), h.listUsers)
+		g.GET("/users/:id", auth, middleware.RequirePermission(core.PermViewUsers), h.getUserDetail)
 		g.PUT("/users/:id/status", auth, middleware.RequirePermission(core.PermManageUsers), h.updateUserStatus)
 
 		g.GET("/kyc-documents", auth, middleware.RequirePermission(core.PermReviewKYC), h.listKYCDocuments)
@@ -125,6 +129,7 @@ func RegisterAdmin(r *gin.Engine, authSvc AdminAuthService, treasurySvc AdminTre
 		g.DELETE("/admin-users/:id", auth, middleware.RequirePermission(core.PermManageAdminUsers), h.deleteAdminUser)
 
 		g.POST("/notifications/broadcast", auth, middleware.RequirePermission(core.PermNotifyBroadcast), h.broadcastNotification)
+		g.GET("/notifications/history", auth, middleware.RequirePermission(core.PermNotifyBroadcast), h.notificationHistory)
 
 		g.GET("/health", auth, middleware.RequirePermission(core.PermViewHealth), h.health)
 
@@ -679,6 +684,30 @@ func (h *adminHandler) deleteAdminUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "deleted"})
 }
 
+// ── User Detail ──
+
+func (h *adminHandler) getUserDetail(c *gin.Context) {
+	id := c.Param("id")
+	ctx := c.Request.Context()
+
+	user, err := h.store.GetUserByID(ctx, id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+		return
+	}
+
+	kycDocs, _, _ := h.store.ListKYCDocuments(ctx, "", 1, 100)
+	txns, _, _ := h.store.ListTransactions(ctx, id, 1, 50)
+	agent, _ := h.store.GetAgentByUserID(ctx, id)
+
+	c.JSON(http.StatusOK, gin.H{
+		"user":          user,
+		"kyc_documents": kycDocs,
+		"transactions":  txns,
+		"agent":         agent,
+	})
+}
+
 // ── Notification Broadcast ──
 
 func (h *adminHandler) broadcastNotification(c *gin.Context) {
@@ -736,6 +765,39 @@ func (h *adminHandler) health(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, checks)
+}
+
+// ── Notification History ──
+
+func (h *adminHandler) notificationHistory(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 || limit > 200 {
+		limit = 50
+	}
+
+	logs, _, err := h.store.ListAdminLogs(c.Request.Context(), page, limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	var filtered []core.AdminLog
+	for _, l := range logs {
+		if l.Action == "broadcast_notification" {
+			filtered = append(filtered, l)
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"logs":  filtered,
+		"total": len(filtered),
+		"page":  page,
+		"limit": limit,
+	})
 }
 
 func (h *adminHandler) auditLog(ctx context.Context, adminID, action, targetID, detail string) {

@@ -17,7 +17,8 @@ const ALL_NAV: { key: Page; label: string; icon: string; roles: string[] }[] = [
   { key: 'compliance', label: 'Compliance', icon: '🛡️', roles: ['super_admin', 'admin', 'compliance_officer'] },
   { key: 'kyc_review', label: 'KYC Review', icon: '📋', roles: ['super_admin', 'admin', 'compliance_officer'] },
   { key: 'admin_users', label: 'Admin Users', icon: '🔐', roles: ['super_admin'] },
-  { key: 'notifications', label: 'Notifications', icon: '🔔', roles: ['super_admin', 'admin'] },
+  { key: 'notifications', label: 'Broadcast', icon: '🔔', roles: ['super_admin', 'admin'] },
+  { key: 'notification_history', label: 'Notif. History', icon: '📜', roles: ['super_admin', 'admin'] },
   { key: 'health', label: 'System Health', icon: '❤️', roles: [] },
   { key: 'webhook_logs', label: 'Webhook Logs', icon: '🔗', roles: ['super_admin', 'admin', 'support'] },
 ];

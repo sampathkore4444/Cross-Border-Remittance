@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { fetchFlagged, reviewFlagged, type FlaggedResponse } from '../api/client';
+import { downloadCSV } from '../utils/csv';
+import { useToast } from '../components/Toast';
 import Loading from '../components/Loading';
 
 const SEVERITY_COLORS: Record<string, string> = {
@@ -7,6 +9,7 @@ const SEVERITY_COLORS: Record<string, string> = {
 };
 
 export default function Compliance() {
+  const { toast } = useToast();
   const [data, setData] = useState<FlaggedResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -25,7 +28,7 @@ export default function Compliance() {
 
   const exportCSV = () => {
     const flagged = data?.transactions ?? [];
-    if (flagged.length === 0) return;
+    if (flagged.length === 0) { toast('No flagged transactions to export', 'info'); return; }
     const headers = ['Ref', 'Sender', 'Amount', 'Reason', 'Severity'];
     const rows = flagged.map((f: any) => {
       const severity = (f.source_amount ?? 0) > 30000 ? 'High' : (f.source_amount ?? 0) > 10000 ? 'Medium' : 'Low';
@@ -35,13 +38,8 @@ export default function Compliance() {
         f.reason || f.flagged_reason || 'Automated flag', severity,
       ];
     });
-    const csv = [headers.join(','), ...rows.map((r: string[]) => r.map((c: string) => `"${c.replace(/"/g, '""')}"`).join(','))].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `compliance-${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-    URL.revokeObjectURL(link.href);
+    downloadCSV(headers, rows, 'compliance');
+    toast('Compliance data exported');
   };
 
   const handleReview = async (id: string, action: 'dismiss' | 'escalate') => {
@@ -49,9 +47,10 @@ export default function Compliance() {
     setError('');
     try {
       await reviewFlagged(id, action);
+      toast(`Flagged transaction ${action}ed`);
       load();
     } catch {
-      setError('Failed to update');
+      toast('Failed to update', 'error');
     } finally {
       setActioning(null);
     }
@@ -71,10 +70,16 @@ export default function Compliance() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <h1 style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Compliance</h1>
-        <button onClick={exportCSV} style={{
-          padding: '8px 16px', borderRadius: 8, border: '1px solid #D1D5DB',
-          background: '#FFF', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#374151',
-        }}>Export CSV</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={load} style={{
+            padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border-color)',
+            background: 'transparent', color: 'var(--text-primary)', fontWeight: 600, cursor: 'pointer', fontSize: 13,
+          }}>Refresh</button>
+          <button onClick={exportCSV} style={{
+            padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border-color)',
+            background: 'transparent', color: 'var(--text-primary)', fontWeight: 600, cursor: 'pointer', fontSize: 13,
+          }}>Export CSV</button>
+        </div>
       </div>
 
       {error && (
@@ -87,8 +92,8 @@ export default function Compliance() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 24 }}>
         {sanctions.map((s, i) => (
           <div key={i} style={{ background: 'var(--card-bg)', borderRadius: 12, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-            <p style={{ fontSize: 14, color: '#6B7280', margin: '0 0 8px' }}>{s.type}</p>
-            <p style={{ fontSize: 13, color: '#9CA3AF', margin: '0 0 8px' }}>Hits: {s.hits}</p>
+            <p style={{ fontSize: 14, color: 'var(--text-secondary)', margin: '0 0 8px' }}>{s.type}</p>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 8px' }}>Hits: {s.hits}</p>
             <span style={{
               padding: '4px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600,
               background: s.status === 'Passed' ? '#E8F5E9' : '#FFF3E0',
@@ -98,25 +103,21 @@ export default function Compliance() {
         ))}
       </div>
 
-      <div style={{ background: '#FFF', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', marginBottom: 24 }}>
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 style={{ fontSize: 16, fontWeight: 700, color: '#1A1A2E', margin: 0 }}>
-            Flagged Transactions {flagged.length > 0 && <span style={{ fontSize: 13, fontWeight: 400, color: '#6B7280' }}>({flagged.length})</span>}
+      <div style={{ background: 'var(--card-bg)', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', marginBottom: 24 }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+            Flagged Transactions {flagged.length > 0 && <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--text-secondary)' }}>({flagged.length})</span>}
           </h3>
-          <button onClick={load} style={{
-            padding: '6px 14px', borderRadius: 6, border: '1px solid #D1D5DB',
-            background: '#FFF', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#374151',
-          }}>Refresh</button>
         </div>
         <div style={{
           display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1.5fr 1fr 120px',
-          padding: '14px 20px', borderBottom: '1px solid #E5E7EB',
-          fontSize: 12, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase',
+          padding: '14px 20px', borderBottom: '1px solid var(--border-color)',
+          fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase',
         }}>
           <span>Ref</span><span>Sender</span><span>Amount</span><span>Reason</span><span>Severity</span><span>Actions</span>
         </div>
         {flagged.length === 0 ? (
-          <div style={{ padding: 40, textAlign: 'center', color: '#9CA3AF' }}>No flagged transactions — all clear</div>
+          <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-secondary)' }}>No flagged transactions — all clear</div>
         ) : (
           flagged.map((f, i) => {
             const id = f.id || f.transaction_ref || `tx-${i}`;
@@ -124,8 +125,8 @@ export default function Compliance() {
             return (
               <div key={id} style={{
                 display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1.5fr 1fr 120px',
-                padding: '14px 20px', borderBottom: '1px solid #F0F0F0',
-                fontSize: 14, color: '#1A1A2E', alignItems: 'center',
+                padding: '14px 20px', borderBottom: '1px solid var(--border-color)',
+                fontSize: 14, color: 'var(--text-primary)', alignItems: 'center',
               }}>
                 <span style={{ fontWeight: 600, fontFamily: 'monospace' }}>{f.transaction_ref || id.slice(0, 8)}</span>
                 <span>{f.sender_id?.slice(0, 8) || 'Unknown'}</span>
@@ -134,25 +135,21 @@ export default function Compliance() {
                 <span style={{ fontWeight: 600, color: SEVERITY_COLORS[severity.toLowerCase()] || '#9CA3AF' }}>{severity}</span>
                 <div style={{ display: 'flex', gap: 6 }}>
                   <button
-                    onClick={() => handleReview(f.id || f.transaction_ref || '', 'dismiss')}
-                    disabled={actioning === (f.id || f.transaction_ref || '')}
+                    onClick={() => handleReview(id, 'dismiss')}
+                    disabled={actioning === id}
                     style={{
-                      padding: '5px 10px', borderRadius: 6, border: '1px solid #D1D5DB',
-                      background: '#FFF', cursor: 'pointer', fontSize: 11, fontWeight: 600, color: '#2E7D32',
+                      padding: '5px 10px', borderRadius: 6, border: '1px solid var(--border-color)',
+                      background: 'transparent', cursor: 'pointer', fontSize: 11, fontWeight: 600, color: '#2E7D32',
                     }}
-                  >
-                    Dismiss
-                  </button>
+                  >Dismiss</button>
                   <button
-                    onClick={() => handleReview(f.id || f.transaction_ref || '', 'escalate')}
-                    disabled={actioning === (f.id || f.transaction_ref || '')}
+                    onClick={() => handleReview(id, 'escalate')}
+                    disabled={actioning === id}
                     style={{
-                      padding: '5px 10px', borderRadius: 6, border: '1px solid #FFCDD2',
-                      background: '#FFF', cursor: 'pointer', fontSize: 11, fontWeight: 600, color: '#E65100',
+                      padding: '5px 10px', borderRadius: 6, border: '1px solid var(--border-color)',
+                      background: 'transparent', cursor: 'pointer', fontSize: 11, fontWeight: 600, color: '#E65100',
                     }}
-                  >
-                    Escalate
-                  </button>
+                  >Escalate</button>
                 </div>
               </div>
             );
@@ -161,8 +158,8 @@ export default function Compliance() {
       </div>
 
       <div style={{ background: 'var(--card-bg)', borderRadius: 12, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-        <h3 style={{ fontSize: 16, fontWeight: 700, color: '#1A1A2E', margin: '0 0 12px' }}>AML Screening Rules</h3>
-        <ul style={{ margin: 0, paddingLeft: 20, color: '#6B7280', fontSize: 14, lineHeight: 2 }}>
+        <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 12px' }}>AML Screening Rules</h3>
+        <ul style={{ margin: 0, paddingLeft: 20, color: 'var(--text-secondary)', fontSize: 14, lineHeight: 2 }}>
           <li>Velocity check: &gt;5 tx/hour from same sender → Flag</li>
           <li>New device + large tx: &gt;10,000 THB → Require KYC Level 2</li>
           <li>Unusual location: Sender IP from Laos → Additional verification</li>

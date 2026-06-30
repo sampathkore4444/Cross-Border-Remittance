@@ -1,21 +1,21 @@
 import { useState } from 'react';
 import { broadcastNotification } from '../api/client';
+import { useToast } from '../components/Toast';
 
 export default function Notifications() {
+  const { toast } = useToast();
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [sending, setSending] = useState(false);
-  const [result, setResult] = useState<{ sent: number; total: number } | null>(null);
   const [error, setError] = useState('');
 
   const handleSend = async () => {
     if (!title.trim() || !body.trim()) return;
     setSending(true);
     setError('');
-    setResult(null);
     try {
       const res = await broadcastNotification(title, body);
-      setResult(res);
+      toast(`Notification sent to ${res.sent} of ${res.total} users`);
       setTitle('');
       setBody('');
     } catch (e: any) {
@@ -66,13 +66,6 @@ export default function Notifications() {
         {error && (
           <div style={{ marginTop: 16, padding: 12, borderRadius: 8, background: '#FFEBEE', color: '#C62828', fontSize: 13 }}>
             {error}
-          </div>
-        )}
-
-        {result && (
-          <div style={{ marginTop: 16, padding: 16, borderRadius: 8, background: '#E8F5E9', color: '#2E7D32' }}>
-            <p style={{ fontWeight: 700, margin: '0 0 4px', fontSize: 14 }}>Notification sent!</p>
-            <p style={{ margin: 0, fontSize: 13 }}>Delivered to {result.sent} of {result.total} users</p>
           </div>
         )}
       </div>

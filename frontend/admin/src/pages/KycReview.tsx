@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { fetchKYCDocuments, reviewKYCDocument, type KYCDocument } from '../api/client';
+import { useToast } from '../components/Toast';
 import Loading from '../components/Loading';
 
 export default function KycReview() {
+  const { toast } = useToast();
   const [docs, setDocs] = useState<KYCDocument[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -26,9 +28,10 @@ export default function KycReview() {
   const handleReview = async (id: number, status: string) => {
     try {
       await reviewKYCDocument(id, status);
+      toast(`KYC document ${status}`);
       load();
     } catch (e: any) {
-      alert(e.response?.data?.error || e.message);
+      toast(e.response?.data?.error || e.message, 'error');
     }
   };
 
@@ -36,7 +39,13 @@ export default function KycReview() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 24 }}>KYC Document Review</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <h1 style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>KYC Document Review</h1>
+        <button onClick={load} style={{
+          padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border-color)',
+          background: 'transparent', color: 'var(--text-primary)', fontWeight: 600, cursor: 'pointer', fontSize: 13,
+        }}>Refresh</button>
+      </div>
       <div style={{ marginBottom: 16, display: 'flex', gap: 8 }}>
         {['', 'pending', 'approved', 'rejected'].map((s) => (
           <button
