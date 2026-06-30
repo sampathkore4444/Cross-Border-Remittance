@@ -14,6 +14,8 @@ export default function Users() {
   const [page, setPage] = useState(1);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [confirmTarget, setConfirmTarget] = useState<{ id: string; name: string; action: 'suspend' | 'activate' } | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkAction, setBulkAction] = useState<'suspend' | 'activate' | null>(null);
   const limit = 20;
 
   const load = (p: number) => {
@@ -26,6 +28,40 @@ export default function Users() {
   };
 
   useEffect(() => { load(page); }, [page]);
+
+  const toggleSelect = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    const users = data?.users ?? [];
+    if (selected.size === users.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(users.map((u: any) => u.id)));
+    }
+  };
+
+  const handleBulkAction = async () => {
+    if (!bulkAction) return;
+    const newActive = bulkAction === 'activate';
+    let success = 0;
+    for (const id of selected) {
+      try {
+        await updateUserStatus(id, newActive);
+        success++;
+      } catch {}
+    }
+    toast(`${success} of ${selected.size} users ${bulkAction}d`);
+    setBulkAction(null);
+    setSelected(new Set());
+    load(page);
+  };
 
   const handleToggleStatus = async () => {
     if (!confirmTarget) return;
@@ -86,12 +122,35 @@ export default function Users() {
         </div>
       )}
 
+      {selected.size > 0 && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 12, padding: '10px 20px',
+          background: '#E8F5E9', borderRadius: 8, marginBottom: 16,
+        }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: '#2E7D32' }}>{selected.size} selected</span>
+          <button onClick={() => setBulkAction('activate')} style={{
+            padding: '6px 14px', borderRadius: 6, border: '1px solid #2E7D32',
+            background: 'transparent', color: '#2E7D32', fontWeight: 600, cursor: 'pointer', fontSize: 13,
+          }}>Activate All</button>
+          <button onClick={() => setBulkAction('suspend')} style={{
+            padding: '6px 14px', borderRadius: 6, border: '1px solid #E65100',
+            background: 'transparent', color: '#E65100', fontWeight: 600, cursor: 'pointer', fontSize: 13,
+          }}>Suspend All</button>
+          <button onClick={() => setSelected(new Set())} style={{
+            padding: '6px 14px', borderRadius: 6, border: '1px solid var(--border-color)',
+            background: 'transparent', color: 'var(--text-primary)', fontWeight: 600, cursor: 'pointer', fontSize: 13,
+          }}>Clear</button>
+        </div>
+      )}
+
       <div style={{ background: 'var(--card-bg)', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', overflow: 'auto' }}>
         <div style={{
-          display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr 1fr 120px',
+          display: 'grid', gridTemplateColumns: '40px 1fr 1fr 1fr 1fr 1fr 1fr 120px',
           padding: '14px 20px', borderBottom: '1px solid var(--border-color)',
-          fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase',
+          fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', alignItems: 'center',
         }}>
+          <input type="checkbox" checked={users.length > 0 && selected.size === users.length}
+            onChange={toggleSelectAll} style={{ cursor: 'pointer' }} />
           <span>ID</span><span>Name</span><span>Phone</span><span>Role</span><span>KYC</span><span>Status</span><span>Actions</span>
         </div>
         {users.length === 0 ? (
@@ -99,22 +158,25 @@ export default function Users() {
         ) : (
           users.map((u, i) => (
             <div key={u.id || i} style={{
-              display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr 1fr 120px',
+              display: 'grid', gridTemplateColumns: '40px 1fr 1fr 1fr 1fr 1fr 1fr 120px',
               padding: '14px 20px', borderBottom: '1px solid var(--border-color)',
               fontSize: 14, color: 'var(--text-primary)', alignItems: 'center', cursor: 'pointer',
-            }} onClick={() => setSelectedUserId(u.id)}>
-              <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{u.id?.slice(0, 12) || '—'}</span>
-              <span style={{ fontWeight: 600 }}>{u.name || '—'}</span>
-              <span>{u.phone || '—'}</span>
-              <span>{u.role || 'sender'}</span>
-              <span>
+            }}>
+              <div onClick={(e) => e.stopPropagation()}>
+                <input type="checkbox" checked={selected.has(u.id)} onChange={() => toggleSelect(u.id)} style={{ cursor: 'pointer' }} />
+              </div>
+              <span style={{ fontFamily: 'monospace', fontSize: 12 }} onClick={() => setSelectedUserId(u.id)}>{u.id?.slice(0, 12) || '—'}</span>
+              <span style={{ fontWeight: 600 }} onClick={() => setSelectedUserId(u.id)}>{u.name || '—'}</span>
+              <span onClick={() => setSelectedUserId(u.id)}>{u.phone || '—'}</span>
+              <span onClick={() => setSelectedUserId(u.id)}>{u.role || 'sender'}</span>
+              <span onClick={() => setSelectedUserId(u.id)}>
                 <span style={{
                   padding: '3px 10px', borderRadius: 6, fontSize: 12, fontWeight: 600,
                   background: u.kyc_level === 'unverified' ? '#FFF3E0' : '#E8F5E9',
                   color: u.kyc_level === 'unverified' ? '#E65100' : '#2E7D32',
                 }}>{u.kyc_level || 'unverified'}</span>
               </span>
-              <span>
+              <span onClick={() => setSelectedUserId(u.id)}>
                 <span style={{
                   display: 'inline-block', padding: '3px 10px', borderRadius: 6,
                   fontSize: 12, fontWeight: 600,
@@ -154,6 +216,16 @@ export default function Users() {
         danger={confirmTarget?.action === 'suspend'}
         onConfirm={handleToggleStatus}
         onCancel={() => setConfirmTarget(null)}
+      />
+
+      <ConfirmDialog
+        open={!!bulkAction}
+        title={bulkAction === 'suspend' ? 'Suspend Users' : 'Activate Users'}
+        message={`Are you sure you want to ${bulkAction} ${selected.size} selected users?`}
+        confirmLabel={bulkAction === 'suspend' ? 'Suspend All' : 'Activate All'}
+        danger={bulkAction === 'suspend'}
+        onConfirm={handleBulkAction}
+        onCancel={() => setBulkAction(null)}
       />
     </div>
   );

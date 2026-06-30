@@ -17,10 +17,11 @@ import KycReview from './pages/KycReview';
 import AdminUsers from './pages/AdminUsers';
 import Notifications from './pages/Notifications';
 import NotificationHistory from './pages/NotificationHistory';
+import AdminLogs from './pages/AdminLogs';
 import Health from './pages/Health';
 import LoginPage from './pages/LoginPage';
 
-export type Page = 'dashboard' | 'transactions' | 'treasury' | 'agents' | 'compliance' | 'users' | 'webhook_logs' | 'kyc_review' | 'admin_users' | 'notifications' | 'notification_history' | 'health';
+export type Page = 'dashboard' | 'transactions' | 'treasury' | 'agents' | 'compliance' | 'users' | 'webhook_logs' | 'kyc_review' | 'admin_users' | 'notifications' | 'notification_history' | 'admin_logs' | 'health';
 
 function ProtectedLayout() {
   const { isAuthenticated, logout, role } = useAuth();
@@ -40,6 +41,7 @@ function ProtectedLayout() {
     admin_users: <AdminUsers />,
     notifications: <Notifications />,
     notification_history: <NotificationHistory />,
+    admin_logs: <AdminLogs />,
     health: <Health />,
   };
 

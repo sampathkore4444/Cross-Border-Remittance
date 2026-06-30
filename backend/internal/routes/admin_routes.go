@@ -47,6 +47,7 @@ type AdminStore interface {
 	GetTransaction(ctx context.Context, ref string) (*core.Transaction, error)
 	ListTransactionLogs(ctx context.Context, ref string) ([]core.TransactionStatusLog, error)
 	ListTransactions(ctx context.Context, senderID string, page, limit int) ([]core.Transaction, int, error)
+	CreateAgent(ctx context.Context, a *core.Agent) error
 	ListAgents(ctx context.Context, country string, page, limit int) ([]core.Agent, int, error)
 	UpdateAgentStatus(ctx context.Context, id string, isActive bool) error
 	UpdateFloat(ctx context.Context, agentID string, amount int64) error
@@ -109,6 +110,7 @@ func RegisterAdmin(r *gin.Engine, authSvc AdminAuthService, treasurySvc AdminTre
 		g.GET("/transactions/:ref", auth, middleware.RequirePermission(core.PermViewTransactions), h.getTransactionDetail)
 
 		g.GET("/agents", auth, middleware.RequirePermission(core.PermViewAgents), h.listAgents)
+		g.POST("/agents", auth, middleware.RequirePermission(core.PermManageAgents), h.createAgent)
 		g.PUT("/agents/:id/status", auth, middleware.RequirePermission(core.PermManageAgents), h.updateAgentStatus)
 		g.POST("/agents/:id/float", auth, middleware.RequirePermission(core.PermManageAgents), h.depositAgentFloat)
 
@@ -298,6 +300,46 @@ func (h *adminHandler) sanctionsCheck(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"status": "clear"})
+}
+
+func (h *adminHandler) createAgent(c *gin.Context) {
+	var req struct {
+		UserID         string  `json:"user_id" binding:"required"`
+		Name           string  `json:"name" binding:"required"`
+		Phone          string  `json:"phone"`
+		Province       string  `json:"province"`
+		ShopName       string  `json:"shop_name" binding:"required"`
+		ShopAddress    string  `json:"shop_address"`
+		ShopProvince   string  `json:"shop_province"`
+		Country        string  `json:"country"`
+		AgentType      string  `json:"agent_type" binding:"required"`
+		CommissionRate float64 `json:"commission_rate"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	agent := &core.Agent{
+		UserID:         req.UserID,
+		Name:           req.Name,
+		Phone:          req.Phone,
+		Province:       req.Province,
+		ShopName:       req.ShopName,
+		ShopAddress:    req.ShopAddress,
+		ShopProvince:   req.ShopProvince,
+		Country:        req.Country,
+		AgentType:      core.AgentType(req.AgentType),
+		CommissionRate: req.CommissionRate,
+		IsActive:       true,
+		KYCStatus:      "pending",
+	}
+	if err := h.store.CreateAgent(c.Request.Context(), agent); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	adminID, _ := c.Get("admin_id")
+	h.auditLog(c.Request.Context(), adminID.(string), "create_agent", agent.ID, "Shop: "+req.ShopName)
+	c.JSON(http.StatusCreated, gin.H{"id": agent.ID, "status": "created"})
 }
 
 func (h *adminHandler) updateAgentStatus(c *gin.Context) {

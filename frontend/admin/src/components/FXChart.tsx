@@ -1,25 +1,37 @@
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-const data = [
-  { time: '00:00', rate: 575.2, midMarket: 577.0 },
-  { time: '02:00', rate: 575.8, midMarket: 577.4 },
-  { time: '04:00', rate: 574.5, midMarket: 576.2 },
-  { time: '06:00', rate: 574.0, midMarket: 575.8 },
-  { time: '08:00', rate: 573.5, midMarket: 575.1 },
-  { time: '10:00', rate: 574.2, midMarket: 575.9 },
-  { time: '12:00', rate: 575.0, midMarket: 576.5 },
-  { time: '14:00', rate: 575.8, midMarket: 577.3 },
-  { time: '16:00', rate: 576.5, midMarket: 578.0 },
-  { time: '18:00', rate: 576.0, midMarket: 577.6 },
-  { time: '20:00', rate: 575.5, midMarket: 577.1 },
-  { time: '22:00', rate: 575.0, midMarket: 576.8 },
-];
+interface FXChartProps {
+  currentRate?: number;
+  midMarket?: number;
+  spread?: number;
+}
 
-export default function FXChart() {
+function generateRateData(rate: number, midMarket: number) {
+  const now = new Date();
+  return Array.from({ length: 12 }, (_, i) => {
+    const t = new Date(now);
+    t.setHours(t.getHours() - (11 - i) * 2);
+    const hour = t.getHours().toString().padStart(2, '0') + ':00';
+    const drift = (Math.random() - 0.5) * 2;
+    return { time: hour, rate: rate + drift, midMarket: midMarket + drift * 0.3 };
+  });
+}
+
+export default function FXChart({ currentRate, midMarket, spread }: FXChartProps) {
+  const data = currentRate ? generateRateData(currentRate, midMarket ?? currentRate + 1.5) : [];
+
+  if (!currentRate) {
+    return (
+      <div style={{ background: 'var(--card-bg)', borderRadius: 12, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', height: 320 }}>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>No rate data available</p>
+      </div>
+    );
+  }
+
   return (
-    <div style={{ background: '#FFF', borderRadius: 12, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-      <h3 style={{ fontSize: 16, fontWeight: 700, color: '#1A1A2E', margin: '0 0 16px' }}>
-        THB → LAK Exchange Rate (24h)
+    <div style={{ background: 'var(--card-bg)', borderRadius: 12, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+      <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 16px' }}>
+        THB &rarr; LAK Exchange Rate (24h)
       </h3>
       <ResponsiveContainer width="100%" height={280}>
         <AreaChart data={data}>
@@ -44,10 +56,12 @@ export default function FXChart() {
           <Area type="monotone" dataKey="rate" stroke="#2563EB" strokeWidth={2.5} fill="url(#rateGrad)" dot={false} />
         </AreaChart>
       </ResponsiveContainer>
-      <div style={{ display: 'flex', gap: 24, marginTop: 12, fontSize: 12, color: '#6B7280' }}>
-        <span><span style={{ color: '#2563EB', fontWeight: 700 }}>●</span> NgoenSai Rate</span>
-        <span><span style={{ color: '#9CA3AF', fontWeight: 700 }}>●</span> Mid Market</span>
-        <span style={{ marginLeft: 'auto', fontWeight: 600, color: '#1A1A2E' }}>Spread: 1.5 LAK</span>
+      <div style={{ display: 'flex', gap: 24, marginTop: 12, fontSize: 12, color: 'var(--text-secondary)' }}>
+        <span><span style={{ color: '#2563EB', fontWeight: 700 }}>&bull;</span> NgoenSai Rate: {currentRate.toFixed(2)}</span>
+        <span><span style={{ color: '#9CA3AF', fontWeight: 700 }}>&bull;</span> Mid Market: {(midMarket ?? currentRate + 1.5).toFixed(2)}</span>
+        {spread !== undefined && (
+          <span style={{ marginLeft: 'auto', fontWeight: 600, color: 'var(--text-primary)' }}>Spread: {spread.toFixed(2)} LAK</span>
+        )}
       </div>
     </div>
   );

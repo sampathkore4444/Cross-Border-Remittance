@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { fetchTransactions, searchTransactions, fetchTransactionDetail, type TransactionResponse, type TransactionDetailResponse } from '../api/client';
 import Loading from '../components/Loading';
 
@@ -13,6 +13,8 @@ export default function Transactions() {
   const [page, setPage] = useState(1);
   const [detail, setDetail] = useState<TransactionDetailResponse | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const limit = 20;
 
   const [q, setQ] = useState('');
@@ -32,6 +34,15 @@ export default function Transactions() {
   };
 
   useEffect(() => { load(page); }, [page]);
+
+  useEffect(() => {
+    if (autoRefresh && !detail) {
+      intervalRef.current = setInterval(() => load(page), 30000);
+    } else {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    }
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [autoRefresh, detail, page]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,6 +108,21 @@ export default function Transactions() {
         <h1 style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Transactions</h1>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{data?.total ?? 0} total</span>
+          <button onClick={() => { setPage(1); load(1); }} style={{
+            padding: '8px 16px', borderRadius: 8, border: '1px solid #D1D5DB',
+            background: '#FFF', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#374151',
+          }}>Refresh</button>
+          <button
+            onClick={() => setAutoRefresh(!autoRefresh)}
+            style={{
+              padding: '8px 16px', borderRadius: 8, border: '1px solid #D1D5DB',
+              background: autoRefresh ? '#E8F5E9' : '#FFF',
+              color: autoRefresh ? '#2E7D32' : '#374151',
+              fontWeight: 600, cursor: 'pointer', fontSize: 13,
+            }}
+          >
+            {autoRefresh ? 'Auto-Refresh On' : 'Auto-Refresh Off'}
+          </button>
           <button onClick={exportCSV} style={{
             padding: '8px 16px', borderRadius: 8, border: '1px solid #D1D5DB',
             background: '#FFF', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#374151',

@@ -308,4 +308,13 @@ export async function fetchNotificationHistory(page = 1, limit = 50): Promise<Lo
   return data;
 }
 
+export async function createAgent(fields: {
+  user_id: string; name: string; phone?: string; province?: string;
+  shop_name: string; shop_address?: string; shop_province?: string;
+  country?: string; agent_type: string; commission_rate?: number;
+}): Promise<{ id: string; status: string }> {
+  const { data } = await api.post('/v1/admin/agents', fields);
+  return data;
+}
+
 export default api;

@@ -20,6 +20,7 @@ const ALL_NAV: { key: Page; label: string; icon: string; roles: string[] }[] = [
   { key: 'notifications', label: 'Broadcast', icon: '🔔', roles: ['super_admin', 'admin'] },
   { key: 'notification_history', label: 'Notif. History', icon: '📜', roles: ['super_admin', 'admin'] },
   { key: 'health', label: 'System Health', icon: '❤️', roles: [] },
+  { key: 'admin_logs', label: 'Audit Logs', icon: '📝', roles: ['super_admin', 'admin'] },
   { key: 'webhook_logs', label: 'Webhook Logs', icon: '🔗', roles: ['super_admin', 'admin', 'support'] },
 ];
 
