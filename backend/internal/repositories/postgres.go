@@ -26,12 +26,15 @@ type Postgres struct {
 	recipients   map[string][]*core.RecipientProfile
 	adminLogs    []core.AdminLog
 	webhookLogs  []core.WebhookLog
+	kycDocs      []core.KYCDocument
+	adminUsers   map[string]*core.AdminUser
+	adminByUser  map[string]*core.AdminUser
 
 	nextID int64
 }
 
 func NewPostgres(dsn string) (*Postgres, error) {
-	return &Postgres{
+	p := &Postgres{
 		users:        make(map[string]*core.User),
 		usersByPhone: make(map[string]*core.User),
 		txns:         make(map[string]*core.Transaction),
@@ -40,7 +43,25 @@ func NewPostgres(dsn string) (*Postgres, error) {
 		recons:       make(map[string]*core.TreasuryReconciliation),
 		autosends:    make(map[string]*core.Autosend),
 		recipients:   make(map[string][]*core.RecipientProfile),
-	}, nil
+		adminUsers:   make(map[string]*core.AdminUser),
+		adminByUser:  make(map[string]*core.AdminUser),
+	}
+
+	// seed default admin users (SHA256("admin") = 8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918)
+	now := time.Now()
+	seed := []*core.AdminUser{
+		{ID: "admin-super", Username: "super", Password: "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918", Role: core.RoleSuperAdmin, IsActive: true, CreatedAt: now, UpdatedAt: now},
+		{ID: "admin-main", Username: "admin", Password: "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918", Role: core.RoleAdmin, IsActive: true, CreatedAt: now, UpdatedAt: now},
+		{ID: "admin-compliance", Username: "compliance", Password: "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918", Role: core.RoleComplianceOfficer, IsActive: true, CreatedAt: now, UpdatedAt: now},
+		{ID: "admin-treasury", Username: "treasury", Password: "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918", Role: core.RoleTreasuryManager, IsActive: true, CreatedAt: now, UpdatedAt: now},
+		{ID: "admin-support", Username: "support", Password: "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918", Role: core.RoleSupport, IsActive: true, CreatedAt: now, UpdatedAt: now},
+	}
+	for _, u := range seed {
+		p.adminUsers[u.ID] = u
+		p.adminByUser[u.Username] = u
+	}
+
+	return p, nil
 }
 
 func (p *Postgres) nextIDStr(prefix string) string {
@@ -681,4 +702,116 @@ func (p *Postgres) ListWebhookLogs(ctx context.Context, page, limit int) ([]core
 		result = append(result, p.webhookLogs[i])
 	}
 	return result[start:end], total, nil
+}
+
+// ── Admin: KYC Documents ──
+
+func (p *Postgres) ListKYCDocuments(ctx context.Context, status string, page, limit int) ([]core.KYCDocument, int, error) {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	var filtered []core.KYCDocument
+	for _, d := range p.kycDocs {
+		if status == "" || d.Status == status {
+			filtered = append(filtered, d)
+		}
+	}
+	total := len(filtered)
+	start := (page - 1) * limit
+	if start >= total {
+		return []core.KYCDocument{}, total, nil
+	}
+	end := start + limit
+	if end > total {
+		end = total
+	}
+	return filtered[start:end], total, nil
+}
+
+func (p *Postgres) UpdateKYCDocumentStatus(ctx context.Context, id int, status, reviewerID string) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	for i := range p.kycDocs {
+		if p.kycDocs[i].ID == id {
+			p.kycDocs[i].Status = status
+			p.kycDocs[i].ReviewerID = reviewerID
+			return nil
+		}
+	}
+	return fmt.Errorf("kyc document not found")
+}
+
+// ── Admin: Admin Users ──
+
+func (p *Postgres) ListAdminUsers(ctx context.Context) ([]core.AdminUser, error) {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	var result []core.AdminUser
+	for _, u := range p.adminUsers {
+		result = append(result, *u)
+	}
+	return result, nil
+}
+
+func (p *Postgres) GetAdminUserByUsername(ctx context.Context, username string) (*core.AdminUser, error) {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	u, ok := p.adminByUser[username]
+	if !ok {
+		return nil, fmt.Errorf("admin user not found")
+	}
+	return u, nil
+}
+
+func (p *Postgres) CreateAdminUser(ctx context.Context, u *core.AdminUser) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if u.ID == "" {
+		u.ID = p.nextIDStr("ADM")
+	}
+	u.CreatedAt = time.Now()
+	u.UpdatedAt = time.Now()
+	p.adminUsers[u.ID] = u
+	p.adminByUser[u.Username] = u
+	return nil
+}
+
+func (p *Postgres) UpdateAdminUser(ctx context.Context, u *core.AdminUser) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	existing, ok := p.adminUsers[u.ID]
+	if !ok {
+		return fmt.Errorf("admin user not found")
+	}
+	if u.Username != "" {
+		delete(p.adminByUser, existing.Username)
+		p.adminByUser[u.Username] = existing
+		existing.Username = u.Username
+	}
+	if u.Password != "" {
+		existing.Password = u.Password
+	}
+	if u.Role != "" {
+		existing.Role = u.Role
+	}
+	existing.IsActive = u.IsActive
+	existing.UpdatedAt = time.Now()
+	return nil
+}
+
+func (p *Postgres) DeleteAdminUser(ctx context.Context, id string) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	u, ok := p.adminUsers[id]
+	if !ok {
+		return fmt.Errorf("admin user not found")
+	}
+	delete(p.adminUsers, id)
+	delete(p.adminByUser, u.Username)
+	return nil
+}
+
+// ── Admin: Health ──
+
+func (p *Postgres) Ping(ctx context.Context) error {
+	return nil
 }

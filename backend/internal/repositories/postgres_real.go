@@ -545,6 +545,10 @@ func (p *RealPostgres) GetUserCount(ctx context.Context) (int, error) {
 	return count, nil
 }
 
+func (p *RealPostgres) Ping(ctx context.Context) error {
+	return p.db.PingContext(ctx)
+}
+
 func (p *RealPostgres) GetActiveAgentCount(ctx context.Context) (int, error) {
 	var count int
 	p.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM agents WHERE is_active=true`).Scan(&count)
@@ -648,4 +652,93 @@ func (p *RealPostgres) ListAdminLogs(ctx context.Context, page, limit int) ([]co
 	var total int
 	p.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM admin_logs`).Scan(&total)
 	return result, total, nil
+}
+
+// ── Admin: KYC Documents ──
+
+func (p *RealPostgres) ListKYCDocuments(ctx context.Context, status string, page, limit int) ([]core.KYCDocument, int, error) {
+	offset := (page - 1) * limit
+	query := `SELECT id, user_id, doc_type, doc_number, front_url, back_url, selfie_url, status, created_at FROM kyc_documents`
+	var rows *sql.Rows
+	var err error
+	if status == "" {
+		rows, err = p.query(ctx, query+` ORDER BY created_at DESC LIMIT $1 OFFSET $2`, limit, offset)
+	} else {
+		rows, err = p.query(ctx, query+` WHERE status=$1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`, status, limit, offset)
+	}
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+	var result []core.KYCDocument
+	for rows.Next() {
+		var d core.KYCDocument
+		if err := rows.Scan(&d.ID, &d.UserID, &d.DocType, &d.DocNumber, &d.FrontURL, &d.BackURL, &d.SelfieURL, &d.Status, &d.CreatedAt); err != nil {
+			return nil, 0, err
+		}
+		result = append(result, d)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+	var total int
+	if status == "" {
+		p.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM kyc_documents`).Scan(&total)
+	} else {
+		p.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM kyc_documents WHERE status=$1`, status).Scan(&total)
+	}
+	return result, total, nil
+}
+
+func (p *RealPostgres) UpdateKYCDocumentStatus(ctx context.Context, id int, status, reviewerID string) error {
+	return p.exec(ctx, `UPDATE kyc_documents SET status=$1, reviewer_id=$2 WHERE id=$3`, status, reviewerID, id)
+}
+
+// ── Admin: Admin Users ──
+
+func (p *RealPostgres) ListAdminUsers(ctx context.Context) ([]core.AdminUser, error) {
+	rows, err := p.query(ctx,
+		`SELECT id, username, password, role, is_active, created_at, updated_at FROM admin_users ORDER BY created_at ASC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var result []core.AdminUser
+	for rows.Next() {
+		var u core.AdminUser
+		if err := rows.Scan(&u.ID, &u.Username, &u.Password, &u.Role, &u.IsActive, &u.CreatedAt, &u.UpdatedAt); err != nil {
+			return nil, err
+		}
+		result = append(result, u)
+	}
+	return result, rows.Err()
+}
+
+func (p *RealPostgres) GetAdminUserByUsername(ctx context.Context, username string) (*core.AdminUser, error) {
+	u := &core.AdminUser{}
+	err := p.queryRow(ctx, []interface{}{&u.ID, &u.Username, &u.Password, &u.Role, &u.IsActive, &u.CreatedAt, &u.UpdatedAt},
+		`SELECT id, username, password, role, is_active, created_at, updated_at FROM admin_users WHERE username=$1`, username)
+	if err != nil {
+		return nil, fmt.Errorf("admin user not found")
+	}
+	return u, nil
+}
+
+func (p *RealPostgres) CreateAdminUser(ctx context.Context, u *core.AdminUser) error {
+	u.CreatedAt = time.Now()
+	u.UpdatedAt = time.Now()
+	return p.exec(ctx,
+		`INSERT INTO admin_users (id, username, password, role, is_active, created_at, updated_at)
+		 VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+		u.ID, u.Username, u.Password, string(u.Role), u.IsActive, u.CreatedAt, u.UpdatedAt)
+}
+
+func (p *RealPostgres) UpdateAdminUser(ctx context.Context, u *core.AdminUser) error {
+	return p.exec(ctx,
+		`UPDATE admin_users SET username=$1, password=$2, role=$3, is_active=$4, updated_at=NOW() WHERE id=$5`,
+		u.Username, u.Password, string(u.Role), u.IsActive, u.ID)
+}
+
+func (p *RealPostgres) DeleteAdminUser(ctx context.Context, id string) error {
+	return p.exec(ctx, `DELETE FROM admin_users WHERE id=$1`, id)
 }

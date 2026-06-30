@@ -58,6 +58,15 @@ type Store interface {
 	ListUsers(ctx context.Context, page, limit int) ([]core.User, int, error)
 	UpdateUserStatus(ctx context.Context, id string, isActive bool) error
 
+	ListKYCDocuments(ctx context.Context, status string, page, limit int) ([]core.KYCDocument, int, error)
+	UpdateKYCDocumentStatus(ctx context.Context, id int, status, reviewerID string) error
+
+	ListAdminUsers(ctx context.Context) ([]core.AdminUser, error)
+	GetAdminUserByUsername(ctx context.Context, username string) (*core.AdminUser, error)
+	CreateAdminUser(ctx context.Context, u *core.AdminUser) error
+	UpdateAdminUser(ctx context.Context, u *core.AdminUser) error
+	DeleteAdminUser(ctx context.Context, id string) error
+
 	SaveAdminLog(ctx context.Context, log *core.AdminLog) error
 	ListAdminLogs(ctx context.Context, page, limit int) ([]core.AdminLog, int, error)
 
@@ -66,4 +75,6 @@ type Store interface {
 
 	GetUserCount(ctx context.Context) (int, error)
 	GetActiveAgentCount(ctx context.Context) (int, error)
+
+	Ping(ctx context.Context) error
 }

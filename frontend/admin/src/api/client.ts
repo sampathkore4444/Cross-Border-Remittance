@@ -86,7 +86,7 @@ export interface TransactionDetailResponse {
   logs: any[];
 }
 
-export async function login(username: string, password: string): Promise<{ access_token: string; refresh_token: string; expires_in: number }> {
+export async function login(username: string, password: string): Promise<{ access_token: string; refresh_token: string; expires_in: number; role: string }> {
   const { data } = await api.post('/v1/admin/login', { username, password });
   sessionStorage.setItem('admin_token', data.access_token);
   return data;
@@ -190,6 +190,102 @@ export async function setFXOverride(rate: number, midMarket: number): Promise<{ 
 
 export async function clearFXOverride(): Promise<{ status: string }> {
   const { data } = await api.delete('/v1/admin/fx/rate');
+  return data;
+}
+
+// ── KYC Documents ──
+
+export interface KYCDocument {
+  id: number;
+  user_id: string;
+  doc_type: string;
+  doc_number: string;
+  front_url: string;
+  back_url: string;
+  selfie_url: string;
+  status: string;
+  reviewer_id: string;
+  created_at: string;
+}
+
+export interface KYCDocumentResponse {
+  documents: KYCDocument[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export async function fetchKYCDocuments(page = 1, limit = 20, status = ''): Promise<KYCDocumentResponse> {
+  const params = new URLSearchParams();
+  params.set('page', String(page));
+  params.set('limit', String(limit));
+  if (status) params.set('status', status);
+  const { data } = await api.get(`/v1/admin/kyc-documents?${params.toString()}`);
+  return data;
+}
+
+export async function reviewKYCDocument(id: number, status: string): Promise<{ status: string }> {
+  const { data } = await api.put(`/v1/admin/kyc-documents/${id}/review`, { status });
+  return data;
+}
+
+// ── Admin Users ──
+
+export interface AdminUser {
+  id: string;
+  username: string;
+  role: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdminUserResponse {
+  admin_users: AdminUser[];
+}
+
+export async function fetchAdminUsers(): Promise<AdminUserResponse> {
+  const { data } = await api.get('/v1/admin/admin-users');
+  return data;
+}
+
+export async function createAdminUser(username: string, password: string, role: string): Promise<{ id: string }> {
+  const { data } = await api.post('/v1/admin/admin-users', { username, password, role });
+  return data;
+}
+
+export async function updateAdminUser(id: string, fields: { username?: string; password?: string; role?: string; is_active?: boolean }): Promise<{ status: string }> {
+  const { data } = await api.put(`/v1/admin/admin-users/${id}`, fields);
+  return data;
+}
+
+export async function deleteAdminUser(id: string): Promise<{ status: string }> {
+  const { data } = await api.delete(`/v1/admin/admin-users/${id}`);
+  return data;
+}
+
+// ── Notifications ──
+
+export interface BroadcastResponse {
+  sent: number;
+  total: number;
+}
+
+export async function broadcastNotification(title: string, body: string): Promise<BroadcastResponse> {
+  const { data } = await api.post('/v1/admin/notifications/broadcast', { title, body });
+  return data;
+}
+
+// ── Health ──
+
+export interface HealthStatus {
+  database: string;
+  redis: string;
+  queue: string;
+}
+
+export async function fetchHealth(): Promise<HealthStatus> {
+  const { data } = await api.get('/v1/admin/health');
   return data;
 }
 

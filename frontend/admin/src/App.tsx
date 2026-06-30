@@ -11,9 +11,13 @@ import Agents from './pages/Agents';
 import Compliance from './pages/Compliance';
 import Users from './pages/Users';
 import WebhookLogs from './pages/WebhookLogs';
+import KycReview from './pages/KycReview';
+import AdminUsers from './pages/AdminUsers';
+import Notifications from './pages/Notifications';
+import Health from './pages/Health';
 import LoginPage from './pages/LoginPage';
 
-export type Page = 'dashboard' | 'transactions' | 'treasury' | 'agents' | 'compliance' | 'users' | 'webhook_logs';
+export type Page = 'dashboard' | 'transactions' | 'treasury' | 'agents' | 'compliance' | 'users' | 'webhook_logs' | 'kyc_review' | 'admin_users' | 'notifications' | 'health';
 
 function ProtectedLayout() {
   const { isAuthenticated, logout, role } = useAuth();
@@ -29,6 +33,10 @@ function ProtectedLayout() {
     compliance: <Compliance />,
     users: <Users />,
     webhook_logs: <WebhookLogs />,
+    kyc_review: <KycReview />,
+    admin_users: <AdminUsers />,
+    notifications: <Notifications />,
+    health: <Health />,
   };
 
   return (

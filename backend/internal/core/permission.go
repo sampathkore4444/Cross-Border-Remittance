@@ -15,6 +15,10 @@ const (
 	PermManageFX         Permission = "fx:manage"
 	PermViewLogs         Permission = "logs:view"
 	PermViewWebhookLogs  Permission = "webhook_logs:view"
+	PermReviewKYC        Permission = "kyc:review"
+	PermManageAdminUsers Permission = "admin_users:manage"
+	PermNotifyBroadcast  Permission = "notify:broadcast"
+	PermViewHealth       Permission = "health:view"
 	PermManageAdmin      Permission = "admin:manage"
 )
 
@@ -25,6 +29,7 @@ var RolePermissions = map[UserRole][]Permission{
 		PermViewCompliance, PermManageCompliance,
 		PermViewTreasury, PermManageTreasury, PermManageFX,
 		PermViewLogs, PermViewWebhookLogs, PermManageAdmin,
+		PermReviewKYC, PermManageAdminUsers, PermNotifyBroadcast, PermViewHealth,
 	},
 	RoleAdmin: {
 		PermViewTransactions, PermViewUsers,
@@ -32,14 +37,15 @@ var RolePermissions = map[UserRole][]Permission{
 		PermViewCompliance, PermManageCompliance,
 		PermViewTreasury, PermManageTreasury, PermManageFX,
 		PermViewLogs, PermViewWebhookLogs,
+		PermReviewKYC, PermNotifyBroadcast, PermViewHealth,
 	},
 	RoleComplianceOfficer: {
 		PermViewTransactions, PermViewCompliance, PermManageCompliance,
-		PermViewLogs,
+		PermReviewKYC, PermViewLogs,
 	},
 	RoleTreasuryManager: {
 		PermViewTransactions, PermViewTreasury, PermManageTreasury, PermManageFX,
-		PermViewLogs,
+		PermViewLogs, PermViewHealth,
 	},
 	RoleSupport: {
 		PermViewTransactions, PermViewUsers, PermViewAgents,

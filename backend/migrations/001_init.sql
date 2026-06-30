@@ -26,6 +26,21 @@ CREATE TABLE IF NOT EXISTS kyc_documents (
 
 CREATE INDEX IF NOT EXISTS idx_kyc_user ON kyc_documents(user_id);
 
+ALTER TABLE kyc_documents ADD COLUMN IF NOT EXISTS status VARCHAR(32) NOT NULL DEFAULT 'pending';
+ALTER TABLE kyc_documents ADD COLUMN IF NOT EXISTS reviewer_id VARCHAR(64) NOT NULL DEFAULT '';
+
+CREATE TABLE IF NOT EXISTS admin_users (
+    id VARCHAR(64) PRIMARY KEY,
+    username VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    role VARCHAR(32) NOT NULL DEFAULT 'admin',
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_admin_users_username ON admin_users(username);
+
 CREATE TABLE IF NOT EXISTS transactions (
     id VARCHAR(64) PRIMARY KEY,
     transaction_ref VARCHAR(128) UNIQUE NOT NULL,
