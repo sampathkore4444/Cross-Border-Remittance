@@ -3,6 +3,7 @@ import type { Page } from '../App';
 interface SidebarProps {
   currentPage: Page;
   onNavigate: (page: Page) => void;
+  onLogout: () => void;
 }
 
 const NAV: { key: Page; label: string; icon: string }[] = [
@@ -10,10 +11,11 @@ const NAV: { key: Page; label: string; icon: string }[] = [
   { key: 'transactions', label: 'Transactions', icon: '💳' },
   { key: 'treasury', label: 'Treasury', icon: '💰' },
   { key: 'agents', label: 'Agents', icon: '🏪' },
+  { key: 'users', label: 'Users', icon: '👥' },
   { key: 'compliance', label: 'Compliance', icon: '🛡️' },
 ];
 
-export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
+export default function Sidebar({ currentPage, onNavigate, onLogout }: SidebarProps) {
   return (
     <aside style={{ width: 240, background: '#1A1A2E', color: '#FFF', display: 'flex', flexDirection: 'column' }}>
       <div style={{ padding: 24, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
@@ -38,8 +40,18 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
           </button>
         ))}
       </nav>
-      <div style={{ padding: 16, borderTop: '1px solid rgba(255,255,255,0.1)', fontSize: 12, opacity: 0.5 }}>
-        v1.0.0
+      <div style={{ padding: 16, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+        <button
+          onClick={onLogout}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 16px',
+            border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, cursor: 'pointer',
+            fontSize: 13, fontWeight: 600, background: 'transparent', color: 'rgba(255,255,255,0.6)',
+            transition: 'all 0.2s',
+          }}
+        >
+          Sign Out
+        </button>
       </div>
     </aside>
   );

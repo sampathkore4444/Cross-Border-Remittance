@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -23,6 +24,7 @@ type Postgres struct {
 	amlChecks    []core.AMLCheck
 	autosends    map[string]*core.Autosend
 	recipients   map[string][]*core.RecipientProfile
+	adminLogs    []core.AdminLog
 
 	nextID int64
 }
@@ -253,6 +255,55 @@ func (p *Postgres) ListAllTransactions(ctx context.Context, page, limit int) ([]
 	return all[start:end], total, nil
 }
 
+func (p *Postgres) SearchTransactions(ctx context.Context, query, senderPhone, dateFrom, dateTo string, page, limit int) ([]core.Transaction, int, error) {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	var filtered []core.Transaction
+	for _, tx := range p.txns {
+		if query != "" && !strings.Contains(tx.TransactionRef, query) && !strings.Contains(tx.RecipientName, query) && !strings.Contains(tx.RecipientPhone, query) {
+			continue
+		}
+		if senderPhone != "" && !strings.Contains(tx.SenderID, senderPhone) {
+			continue
+		}
+		if dateFrom != "" {
+			t, err := time.Parse("2006-01-02", dateFrom)
+			if err == nil && tx.CreatedAt.Before(t) {
+				continue
+			}
+		}
+		if dateTo != "" {
+			t, err := time.Parse("2006-01-02", dateTo)
+			if err == nil && tx.CreatedAt.After(t.Add(24*time.Hour)) {
+				continue
+			}
+		}
+		filtered = append(filtered, *tx)
+	}
+	total := len(filtered)
+	start := (page - 1) * limit
+	if start >= total {
+		return []core.Transaction{}, total, nil
+	}
+	end := start + limit
+	if end > total {
+		end = total
+	}
+	return filtered[start:end], total, nil
+}
+
+func (p *Postgres) ListTransactionLogs(ctx context.Context, ref string) ([]core.TransactionStatusLog, error) {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	var result []core.TransactionStatusLog
+	for _, l := range p.txnLogs {
+		if l.TransactionID == ref {
+			result = append(result, l)
+		}
+	}
+	return result, nil
+}
+
 // ── Agent ──
 
 func (p *Postgres) CreateAgent(ctx context.Context, a *core.Agent) error {
@@ -318,6 +369,18 @@ func (p *Postgres) UpdateFloat(ctx context.Context, agentID string, amount int64
 		return fmt.Errorf("agent not found")
 	}
 	a.FloatBalanceLAK += amount
+	a.UpdatedAt = time.Now()
+	return nil
+}
+
+func (p *Postgres) UpdateAgentStatus(ctx context.Context, id string, isActive bool) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	a, ok := p.agents[id]
+	if !ok {
+		return fmt.Errorf("agent not found")
+	}
+	a.IsActive = isActive
 	a.UpdatedAt = time.Now()
 	return nil
 }
@@ -390,6 +453,18 @@ func (p *Postgres) SaveAMLCheck(ctx context.Context, check *core.AMLCheck) error
 	check.CreatedAt = time.Now()
 	p.amlChecks = append(p.amlChecks, *check)
 	return nil
+}
+
+func (p *Postgres) UpdateAMLCheckStatus(ctx context.Context, id string, status string) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	for i := range p.amlChecks {
+		if p.amlChecks[i].ID == id {
+			p.amlChecks[i].Status = status
+			return nil
+		}
+	}
+	return fmt.Errorf("aml check not found")
 }
 
 func (p *Postgres) ListFlaggedTransactions(ctx context.Context, status string) ([]core.Transaction, error) {
@@ -509,4 +584,70 @@ func (p *Postgres) GetActiveAgentCount(ctx context.Context) (int, error) {
 		}
 	}
 	return count, nil
+}
+
+// ── Admin: Users ──
+
+func (p *Postgres) ListUsers(ctx context.Context, page, limit int) ([]core.User, int, error) {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	var all []core.User
+	for _, u := range p.users {
+		all = append(all, *u)
+	}
+	total := len(all)
+	start := (page - 1) * limit
+	if start >= total {
+		return []core.User{}, total, nil
+	}
+	end := start + limit
+	if end > total {
+		end = total
+	}
+	return all[start:end], total, nil
+}
+
+func (p *Postgres) UpdateUserStatus(ctx context.Context, id string, isActive bool) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	u, ok := p.users[id]
+	if !ok {
+		return fmt.Errorf("user not found")
+	}
+	u.IsActive = isActive
+	u.UpdatedAt = time.Now()
+	return nil
+}
+
+// ── Admin: Audit Log ──
+
+func (p *Postgres) SaveAdminLog(ctx context.Context, log *core.AdminLog) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if log.ID == "" {
+		log.ID = p.nextIDStr("ADL")
+	}
+	log.CreatedAt = time.Now()
+	p.adminLogs = append(p.adminLogs, *log)
+	return nil
+}
+
+func (p *Postgres) ListAdminLogs(ctx context.Context, page, limit int) ([]core.AdminLog, int, error) {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	total := len(p.adminLogs)
+	start := (page - 1) * limit
+	if start >= total {
+		return []core.AdminLog{}, total, nil
+	}
+	end := start + limit
+	if end > total {
+		end = total
+	}
+	// newest first
+	var result []core.AdminLog
+	for i := len(p.adminLogs) - 1; i >= 0; i-- {
+		result = append(result, p.adminLogs[i])
+	}
+	return result[start:end], total, nil
 }

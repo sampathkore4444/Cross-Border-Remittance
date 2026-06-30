@@ -149,6 +149,18 @@ CREATE TABLE IF NOT EXISTS recipient_profiles (
 
 CREATE INDEX IF NOT EXISTS idx_recipient_user ON recipient_profiles(user_id);
 
+CREATE TABLE IF NOT EXISTS admin_logs (
+    id VARCHAR(64) PRIMARY KEY,
+    admin_id VARCHAR(64) NOT NULL DEFAULT '',
+    action VARCHAR(64) NOT NULL DEFAULT '',
+    target_id VARCHAR(64) NOT NULL DEFAULT '',
+    detail TEXT NOT NULL DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_admin_logs_admin ON admin_logs(admin_id);
+CREATE INDEX IF NOT EXISTS idx_admin_logs_action ON admin_logs(action);
+
 CREATE TABLE IF NOT EXISTS schema_migrations (
     filename VARCHAR(255) PRIMARY KEY,
     applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

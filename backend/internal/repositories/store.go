@@ -25,6 +25,8 @@ type Store interface {
 	ListTransactions(ctx context.Context, senderID string, page, limit int) ([]core.Transaction, int, error)
 	GetTransactionByIdempotency(ctx context.Context, key string) (*core.Transaction, error)
 	SaveTransactionLog(ctx context.Context, log *core.TransactionStatusLog) error
+	ListTransactionLogs(ctx context.Context, ref string) ([]core.TransactionStatusLog, error)
+	SearchTransactions(ctx context.Context, query, senderPhone, dateFrom, dateTo string, page, limit int) ([]core.Transaction, int, error)
 	ListAllTransactions(ctx context.Context, page, limit int) ([]core.Transaction, int, error)
 
 	CreateAgent(ctx context.Context, a *core.Agent) error
@@ -34,12 +36,14 @@ type Store interface {
 	UpdateFloat(ctx context.Context, agentID string, amount int64) error
 	AddFloatTransaction(ctx context.Context, tx *core.FloatTransaction) error
 	GetFloatBalance(ctx context.Context, agentID string) (int64, error)
+	UpdateAgentStatus(ctx context.Context, id string, isActive bool) error
 
 	GetDailyVolume(ctx context.Context, date string) (totalTHB float64, totalLAK int64, err error)
 	SaveReconciliation(ctx context.Context, r *core.TreasuryReconciliation) error
 	GetReconciliation(ctx context.Context, date string) (*core.TreasuryReconciliation, error)
 
 	SaveAMLCheck(ctx context.Context, check *core.AMLCheck) error
+	UpdateAMLCheckStatus(ctx context.Context, id string, status string) error
 	ListFlaggedTransactions(ctx context.Context, status string) ([]core.Transaction, error)
 
 	ListDueAutosends(ctx context.Context) ([]core.Autosend, error)
@@ -50,6 +54,12 @@ type Store interface {
 
 	CreateRecipient(ctx context.Context, r *core.RecipientProfile) error
 	ListRecipients(ctx context.Context, userID string) ([]core.RecipientProfile, error)
+
+	ListUsers(ctx context.Context, page, limit int) ([]core.User, int, error)
+	UpdateUserStatus(ctx context.Context, id string, isActive bool) error
+
+	SaveAdminLog(ctx context.Context, log *core.AdminLog) error
+	ListAdminLogs(ctx context.Context, page, limit int) ([]core.AdminLog, int, error)
 
 	GetUserCount(ctx context.Context) (int, error)
 	GetActiveAgentCount(ctx context.Context) (int, error)

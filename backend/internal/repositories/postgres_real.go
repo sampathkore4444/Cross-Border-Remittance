@@ -197,6 +197,87 @@ func (p *RealPostgres) SaveTransactionLog(ctx context.Context, log *core.Transac
 		log.TransactionID, log.StatusFrom, log.StatusTo, log.ChangedBy, log.Reason, time.Now())
 }
 
+func (p *RealPostgres) ListTransactionLogs(ctx context.Context, ref string) ([]core.TransactionStatusLog, error) {
+	rows, err := p.query(ctx,
+		`SELECT id, transaction_id, status_from, status_to, changed_by, reason, created_at FROM transaction_logs WHERE transaction_id=$1 ORDER BY created_at ASC`, ref)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var result []core.TransactionStatusLog
+	for rows.Next() {
+		var l core.TransactionStatusLog
+		if err := rows.Scan(&l.ID, &l.TransactionID, &l.StatusFrom, &l.StatusTo, &l.ChangedBy, &l.Reason, &l.CreatedAt); err != nil {
+			return nil, err
+		}
+		result = append(result, l)
+	}
+	return result, rows.Err()
+}
+
+func (p *RealPostgres) SearchTransactions(ctx context.Context, query, senderPhone, dateFrom, dateTo string, page, limit int) ([]core.Transaction, int, error) {
+	offset := (page - 1) * limit
+	where := " WHERE 1=1"
+	args := []interface{}{}
+	argIdx := 1
+
+	if query != "" {
+		where += fmt.Sprintf(" AND (transaction_ref ILIKE '%%' || $%d || '%%' OR recipient_name ILIKE '%%' || $%d || '%%' OR recipient_phone ILIKE '%%' || $%d || '%%')", argIdx, argIdx+1, argIdx+2)
+		args = append(args, query, query, query)
+		argIdx += 3
+	}
+	if senderPhone != "" {
+		where += fmt.Sprintf(" AND sender_id ILIKE '%%' || $%d || '%%'", argIdx)
+		args = append(args, senderPhone)
+		argIdx++
+	}
+	if dateFrom != "" {
+		where += fmt.Sprintf(" AND created_at >= $%d::date", argIdx)
+		args = append(args, dateFrom)
+		argIdx++
+	}
+	if dateTo != "" {
+		where += fmt.Sprintf(" AND created_at < ($%d::date + '1 day'::interval)", argIdx)
+		args = append(args, dateTo)
+		argIdx++
+	}
+
+	row := p.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM transactions`+where, args...)
+	var total int
+	row.Scan(&total)
+
+	querySQL := `SELECT id, transaction_ref, sender_id, source_currency, source_amount, exchange_rate, mid_market_rate, target_currency, target_amount, recipient_name, recipient_phone, recipient_province, payout_method, payment_method, payment_status, payout_status, pickup_code, payment_reference, payout_reference, idempotency_key, quoted_at, paid_at, completed_at, picked_up_at, created_at, updated_at FROM transactions` + where + ` ORDER BY created_at DESC LIMIT $` + fmt.Sprintf("%d", argIdx) + ` OFFSET $` + fmt.Sprintf("%d", argIdx+1)
+	args = append(args, limit, offset)
+
+	rows, err := p.query(ctx, querySQL, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+	var result []core.Transaction
+	for rows.Next() {
+		var tx core.Transaction
+		var paidAt, completedAt, pickedUpAt sql.NullTime
+		if err := rows.Scan(&tx.ID, &tx.TransactionRef, &tx.SenderID, &tx.SourceCurrency, &tx.SourceAmount, &tx.ExchangeRate, &tx.MidMarketRate, &tx.TargetCurrency, &tx.TargetAmount, &tx.RecipientName, &tx.RecipientPhone, &tx.RecipientProvince, &tx.PayoutMethod, &tx.PaymentMethod, &tx.PaymentStatus, &tx.PayoutStatus, &tx.PickupCode, &tx.PaymentReference, &tx.PayoutReference, &tx.IdempotencyKey, &tx.QuotedAt, &paidAt, &completedAt, &pickedUpAt, &tx.CreatedAt, &tx.UpdatedAt); err != nil {
+			return nil, 0, err
+		}
+		if paidAt.Valid {
+			tx.PaidAt = &paidAt.Time
+		}
+		if completedAt.Valid {
+			tx.CompletedAt = &completedAt.Time
+		}
+		if pickedUpAt.Valid {
+			tx.PickedUpAt = &pickedUpAt.Time
+		}
+		result = append(result, tx)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+	return result, total, nil
+}
+
 func (p *RealPostgres) ListAllTransactions(ctx context.Context, page, limit int) ([]core.Transaction, int, error) {
 	offset := (page - 1) * limit
 	rows, err := p.query(ctx,
@@ -300,6 +381,10 @@ func (p *RealPostgres) UpdateFloat(ctx context.Context, agentID string, amount i
 	return p.exec(ctx, `UPDATE agents SET float_balance_lak = float_balance_lak + $1, updated_at = NOW() WHERE id=$2`, amount, agentID)
 }
 
+func (p *RealPostgres) UpdateAgentStatus(ctx context.Context, id string, isActive bool) error {
+	return p.exec(ctx, `UPDATE agents SET is_active=$1, updated_at=NOW() WHERE id=$2`, isActive, id)
+}
+
 func (p *RealPostgres) AddFloatTransaction(ctx context.Context, tx *core.FloatTransaction) error {
 	return p.exec(ctx,
 		`INSERT INTO float_transactions (id, agent_id, type, amount, reference, created_at)
@@ -351,6 +436,10 @@ func (p *RealPostgres) SaveAMLCheck(ctx context.Context, check *core.AMLCheck) e
 		`INSERT INTO aml_checks (id, transaction_ref, name, status, reason, created_at)
 		 VALUES ($1,$2,$3,$4,$5,NOW())`,
 		check.ID, check.TransactionRef, check.Name, check.Status, check.Reason)
+}
+
+func (p *RealPostgres) UpdateAMLCheckStatus(ctx context.Context, id string, status string) error {
+	return p.exec(ctx, `UPDATE aml_checks SET status=$1 WHERE id=$2`, status, id)
 }
 
 func (p *RealPostgres) ListFlaggedTransactions(ctx context.Context, status string) ([]core.Transaction, error) {
@@ -460,4 +549,70 @@ func (p *RealPostgres) GetActiveAgentCount(ctx context.Context) (int, error) {
 	var count int
 	p.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM agents WHERE is_active=true`).Scan(&count)
 	return count, nil
+}
+
+// ── Admin: Users ──
+
+func (p *RealPostgres) ListUsers(ctx context.Context, page, limit int) ([]core.User, int, error) {
+	offset := (page - 1) * limit
+	rows, err := p.query(ctx,
+		`SELECT id, phone, country_code, name, role, kyc_level, language, is_active, created_at, updated_at FROM users ORDER BY created_at DESC LIMIT $1 OFFSET $2`,
+		limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+	var result []core.User
+	for rows.Next() {
+		var u core.User
+		if err := rows.Scan(&u.ID, &u.Phone, &u.CountryCode, &u.Name, &u.Role, &u.KYCLevel, &u.Language, &u.IsActive, &u.CreatedAt, &u.UpdatedAt); err != nil {
+			return nil, 0, err
+		}
+		result = append(result, u)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+	var total int
+	p.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM users`).Scan(&total)
+	return result, total, nil
+}
+
+func (p *RealPostgres) UpdateUserStatus(ctx context.Context, id string, isActive bool) error {
+	return p.exec(ctx, `UPDATE users SET is_active=$1, updated_at=NOW() WHERE id=$2`, isActive, id)
+}
+
+// ── Admin: Audit Log ──
+
+func (p *RealPostgres) SaveAdminLog(ctx context.Context, log *core.AdminLog) error {
+	log.CreatedAt = time.Now()
+	return p.exec(ctx,
+		`INSERT INTO admin_logs (id, admin_id, action, target_id, detail, created_at)
+		 VALUES ($1,$2,$3,$4,$5,$6)`,
+		log.ID, log.AdminID, log.Action, log.TargetID, log.Detail, log.CreatedAt)
+}
+
+func (p *RealPostgres) ListAdminLogs(ctx context.Context, page, limit int) ([]core.AdminLog, int, error) {
+	offset := (page - 1) * limit
+	rows, err := p.query(ctx,
+		`SELECT id, admin_id, action, target_id, detail, created_at FROM admin_logs ORDER BY created_at DESC LIMIT $1 OFFSET $2`,
+		limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+	var result []core.AdminLog
+	for rows.Next() {
+		var l core.AdminLog
+		if err := rows.Scan(&l.ID, &l.AdminID, &l.Action, &l.TargetID, &l.Detail, &l.CreatedAt); err != nil {
+			return nil, 0, err
+		}
+		result = append(result, l)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+	var total int
+	p.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM admin_logs`).Scan(&total)
+	return result, total, nil
 }
