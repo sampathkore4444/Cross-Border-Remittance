@@ -6,7 +6,7 @@ import { Card } from '@components/Card';
 import { Button } from '@components/Button';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { SendStackParamList } from '@navigation/types';
-import type { PayoutMethod } from '@types/api';
+import type { PayoutMethod } from '@app-types/api';
 
 type Props = NativeStackScreenProps<SendStackParamList, 'PayoutMethod'>;
 

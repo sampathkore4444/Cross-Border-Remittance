@@ -395,6 +395,18 @@ func (p *Postgres) UpdateFloat(ctx context.Context, agentID string, amount int64
 	return nil
 }
 
+func (p *Postgres) UpdateCommission(ctx context.Context, agentID string, amount int64) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	a, ok := p.agents[agentID]
+	if !ok {
+		return fmt.Errorf("agent not found")
+	}
+	a.CommissionTotal += amount
+	a.UpdatedAt = time.Now()
+	return nil
+}
+
 func (p *Postgres) UpdateAgentStatus(ctx context.Context, id string, isActive bool) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()

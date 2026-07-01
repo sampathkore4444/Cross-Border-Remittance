@@ -1,20 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Colors } from '@constants/colors';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import { Camera, CameraType } from 'expo-camera';
 import { api } from '@services/api';
 import { useToast } from '@components/Toast';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@navigation/types';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'QRScanner'>;
+type NavigationProps = NativeStackScreenProps<RootStackParamList, 'QRScanner'>;
 
-export default function QRScannerScreen({ route, navigation }: Props) {
-  const { transactionRef } = route.params;
+type Props = Partial<NavigationProps> & {
+  onScan?: (data: string) => void;
+  onClose?: () => void;
+};
+
+export default function QRScannerScreen({ route, navigation, onScan, onClose }: Props) {
+  const transactionRef = route?.params?.transactionRef;
   const { t } = useTranslation();
   const { showToast } = useToast();
-  const [permission, requestPermission] = useCameraPermissions();
+  const [permission, requestPermission] = Camera.useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [verified, setVerified] = useState(false);
@@ -25,15 +30,30 @@ export default function QRScannerScreen({ route, navigation }: Props) {
     }
   }, [permission]);
 
+  const close = useCallback(() => {
+    if (onClose) {
+      onClose();
+    } else {
+      navigation?.goBack();
+    }
+  }, [onClose, navigation]);
+
   const handleBarCodeScanned = async ({ data }: { data: string }) => {
     if (scanned || verifying || verified) return;
+
+    if (onScan) {
+      setScanned(true);
+      onScan(data);
+      return;
+    }
+
     setScanned(true);
     setVerifying(true);
     try {
       await api.client.post(`/transactions/${transactionRef}/verify-pickup`, { code: data });
       setVerified(true);
       showToast(t('qrscan.success'), 'success');
-      setTimeout(() => navigation.goBack(), 1500);
+      setTimeout(() => navigation?.goBack(), 1500);
     } catch {
       showToast(t('qrscan.error'), 'error');
       setScanned(false);
@@ -50,7 +70,7 @@ export default function QRScannerScreen({ route, navigation }: Props) {
           <TouchableOpacity style={styles.button} onPress={requestPermission}>
             <Text style={styles.buttonText}>{t('photoUpload.grantCamera')}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.cancelButton} onPress={() => navigation.goBack()}>
+          <TouchableOpacity style={styles.cancelButton} onPress={close}>
             <Text style={styles.cancelText}>{t('common.cancel')}</Text>
           </TouchableOpacity>
         </View>
@@ -60,11 +80,11 @@ export default function QRScannerScreen({ route, navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <CameraView
+      <Camera
         style={StyleSheet.absoluteFillObject}
-        facing="back"
-        onBarcodeScanned={scanned && !verifying ? undefined : handleBarCodeScanned}
-        barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+        type={CameraType.back}
+        onBarCodeScanned={scanned && !verifying ? undefined : handleBarCodeScanned}
+        ratio="16:9"
       />
       <View style={styles.overlay}>
         <View style={styles.scanArea} />
@@ -80,7 +100,7 @@ export default function QRScannerScreen({ route, navigation }: Props) {
         ) : (
           <Text style={styles.hint}>{t('qrscan.instructions')}</Text>
         )}
-        <TouchableOpacity style={styles.cancelButton} onPress={() => navigation.goBack()}>
+        <TouchableOpacity style={styles.cancelButton} onPress={close}>
           <Text style={styles.cancelText}>{t('common.cancel')}</Text>
         </TouchableOpacity>
       </View>

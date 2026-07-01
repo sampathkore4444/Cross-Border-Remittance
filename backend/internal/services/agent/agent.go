@@ -19,6 +19,7 @@ type Repository interface {
 	UpdateFloat(ctx context.Context, agentID string, amount int64) error
 	AddFloatTransaction(ctx context.Context, tx *core.FloatTransaction) error
 	GetFloatBalance(ctx context.Context, agentID string) (int64, error)
+	UpdateCommission(ctx context.Context, agentID string, amount int64) error
 }
 
 type Service struct {
@@ -38,6 +39,11 @@ func (s *Service) RegisterAgent(ctx context.Context, agent *core.Agent) error {
 }
 
 func (s *Service) ProcessCashIn(ctx context.Context, agentID string, amountTHB float64, senderPhone, recipientPhone string) (string, error) {
+	agent, err := s.repo.GetAgent(ctx, agentID)
+	if err != nil {
+		return "", fmt.Errorf("get agent: %w", err)
+	}
+
 	balance, err := s.repo.GetFloatBalance(ctx, agentID)
 	if err != nil {
 		return "", fmt.Errorf("get float: %w", err)
@@ -56,10 +62,21 @@ func (s *Service) ProcessCashIn(ctx context.Context, agentID string, amountTHB f
 		BalanceAfter:  balance - int64(amountTHB*100),
 		Reference:     ref,
 	})
+
+	commissionAmt := int64(float64(int64(amountTHB*100)) * agent.CommissionRate / 100.0)
+	if commissionAmt > 0 {
+		s.repo.UpdateCommission(ctx, agentID, commissionAmt)
+	}
+
 	return ref, nil
 }
 
 func (s *Service) ProcessCashOut(ctx context.Context, agentID string, amountLAK int64, recipientPhone string) (string, error) {
+	agent, err := s.repo.GetAgent(ctx, agentID)
+	if err != nil {
+		return "", fmt.Errorf("get agent: %w", err)
+	}
+
 	balance, err := s.repo.GetFloatBalance(ctx, agentID)
 	if err != nil {
 		return "", fmt.Errorf("get float: %w", err)
@@ -78,6 +95,12 @@ func (s *Service) ProcessCashOut(ctx context.Context, agentID string, amountLAK 
 		BalanceAfter:  balance - amountLAK,
 		Reference:     code,
 	})
+
+	commissionAmt := int64(float64(amountLAK) * agent.CommissionRate / 100.0)
+	if commissionAmt > 0 {
+		s.repo.UpdateCommission(ctx, agentID, commissionAmt)
+	}
+
 	return code, nil
 }
 

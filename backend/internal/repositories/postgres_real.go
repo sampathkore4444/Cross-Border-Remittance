@@ -381,6 +381,10 @@ func (p *RealPostgres) UpdateFloat(ctx context.Context, agentID string, amount i
 	return p.exec(ctx, `UPDATE agents SET float_balance_lak = float_balance_lak + $1, updated_at = NOW() WHERE id=$2`, amount, agentID)
 }
 
+func (p *RealPostgres) UpdateCommission(ctx context.Context, agentID string, amount int64) error {
+	return p.exec(ctx, `UPDATE agents SET commission_total = commission_total + $1, updated_at = NOW() WHERE id=$2`, amount, agentID)
+}
+
 func (p *RealPostgres) UpdateAgentStatus(ctx context.Context, id string, isActive bool) error {
 	return p.exec(ctx, `UPDATE agents SET is_active=$1, updated_at=NOW() WHERE id=$2`, isActive, id)
 }

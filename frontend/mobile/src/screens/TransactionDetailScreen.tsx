@@ -7,7 +7,7 @@ import { Button } from '@components/Button';
 import { Loading } from '@components/Loading';
 import { api } from '@services/api';
 import { useToast } from '@components/Toast';
-import type { Transaction } from '@types/api';
+import type { Transaction } from '@app-types/api';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@navigation/types';
 

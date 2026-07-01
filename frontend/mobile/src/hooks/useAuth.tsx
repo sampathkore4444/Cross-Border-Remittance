@@ -3,7 +3,7 @@ import { api } from '@services/api';
 import * as SecureStore from 'expo-secure-store';
 import i18n from '@i18n/index';
 import { useSessionTimer } from './useSessionTimer';
-import type { User } from '@types/api';
+import type { User } from '@app-types/api';
 
 interface AuthState {
   user: User | null;

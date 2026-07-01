@@ -1,4 +1,4 @@
-import type { PayoutMethod, PaymentMethod, QuoteResponse, SendResponse, Transaction } from '@types/api';
+import type { PayoutMethod, PaymentMethod, QuoteResponse, SendResponse, Transaction } from '@app-types/api';
 
 export type AuthStackParamList = {
   Splash: undefined;

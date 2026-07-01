@@ -1,24 +1,29 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Colors } from '@constants/colors';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import { Camera, CameraType } from 'expo-camera';
 import { api } from '@services/api';
 import { useToast } from '@components/Toast';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@navigation/types';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'PhotoCapture'>;
+type NavigationProps = NativeStackScreenProps<RootStackParamList, 'PhotoCapture'>;
 
-export default function RecipientPhotoCapture({ route, navigation }: Props) {
-  const { transactionRef } = route.params;
+type Props = Partial<NavigationProps> & {
+  onCapture?: (photoUri: string) => void;
+  onClose?: () => void;
+};
+
+export default function RecipientPhotoCapture({ route, navigation, onCapture, onClose }: Props) {
+  const transactionRef = route?.params?.transactionRef;
   const { t } = useTranslation();
   const { showToast } = useToast();
-  const [permission, requestPermission] = useCameraPermissions();
+  const [permission, requestPermission] = Camera.useCameraPermissions();
   const [photo, setPhoto] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const cameraRef = useRef<CameraView>(null);
+  const cameraRef = useRef<Camera>(null);
 
   useEffect(() => {
     if (!permission?.granted) {
@@ -33,6 +38,14 @@ export default function RecipientPhotoCapture({ route, navigation }: Props) {
     return unsub;
   }, []);
 
+  const close = useCallback(() => {
+    if (onClose) {
+      onClose();
+    } else {
+      navigation?.goBack();
+    }
+  }, [onClose, navigation]);
+
   const takePhoto = async () => {
     if (!cameraRef.current) return;
     try {
@@ -45,12 +58,19 @@ export default function RecipientPhotoCapture({ route, navigation }: Props) {
 
   const confirmPhoto = async () => {
     if (!photo) return;
+
+    if (onCapture) {
+      onCapture(photo);
+      return;
+    }
+
     setUploading(true);
     setUploadProgress(0);
+    const ref = transactionRef || '';
     try {
-      await api.uploadPhoto(photo, transactionRef);
+      await api.uploadPhoto(photo, ref);
       showToast(t('photoUpload.uploadSuccess'), 'success');
-      navigation.goBack();
+      navigation?.goBack();
     } catch {
       showToast(t('photoUpload.uploadError'), 'error');
     } finally {
@@ -71,7 +91,7 @@ export default function RecipientPhotoCapture({ route, navigation }: Props) {
           <TouchableOpacity style={styles.button} onPress={requestPermission}>
             <Text style={styles.buttonText}>{t('photoUpload.grantCamera')}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.cancelButton} onPress={() => navigation.goBack()}>
+          <TouchableOpacity style={styles.cancelButton} onPress={close}>
             <Text style={styles.cancelText}>{t('common.cancel')}</Text>
           </TouchableOpacity>
         </View>
@@ -107,7 +127,7 @@ export default function RecipientPhotoCapture({ route, navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <CameraView ref={cameraRef} style={StyleSheet.absoluteFillObject} facing="front" />
+      <Camera ref={cameraRef} style={StyleSheet.absoluteFillObject} type={CameraType.front} ratio="16:9" />
       <View style={styles.overlay}>
         <Text style={styles.overlayText}>{t('photoUpload.takePhoto')}</Text>
         <TouchableOpacity style={styles.shutterButton} onPress={takePhoto}>
@@ -115,7 +135,7 @@ export default function RecipientPhotoCapture({ route, navigation }: Props) {
         </TouchableOpacity>
       </View>
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.cancelButton} onPress={() => navigation.goBack()}>
+        <TouchableOpacity style={styles.cancelButton} onPress={close}>
           <Text style={styles.cancelText}>{t('common.cancel')}</Text>
         </TouchableOpacity>
       </View>

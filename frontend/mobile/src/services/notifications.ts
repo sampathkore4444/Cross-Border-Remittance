@@ -92,3 +92,28 @@ export function addNotificationReceivedListener(
 export function getLastNotificationResponse() {
   return Notifications.getLastNotificationResponseAsync();
 }
+
+export async function scheduleFloatAlert(minimumBalance: number, currentBalance: number) {
+  if (currentBalance >= minimumBalance) return;
+  try {
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: 'Low Float Balance',
+        body: `Your float balance (${currentBalance.toLocaleString()} LAK) is below the minimum (${minimumBalance.toLocaleString()} LAK). Please deposit to continue serving customers.`,
+        data: { type: 'float_alert' },
+      },
+      trigger: null,
+    });
+  } catch { }
+}
+
+export async function cancelAllFloatAlerts() {
+  try {
+    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    for (const n of scheduled) {
+      if (n.content.data?.type === 'float_alert') {
+        await Notifications.cancelScheduledNotificationAsync(n.identifier);
+      }
+    }
+  } catch { }
+}

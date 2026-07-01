@@ -41,6 +41,7 @@ export interface QuoteResponse {
     fx_margin: number;
     payout_fee: number;
     total_fee_percent: number;
+    mid_market_rate?: number;
   };
   payout_options: PayoutOption[];
   rate_expires_at: string;

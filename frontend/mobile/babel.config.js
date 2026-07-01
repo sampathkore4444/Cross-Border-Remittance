@@ -16,7 +16,7 @@ module.exports = function (api) {
             '@constants': './src/constants',
             '@i18n': './src/i18n',
             '@utils': './src/utils',
-            '@types': './src/types',
+            '@app-types': './src/types',
           },
           extensions: ['.ios.ts', '.android.ts', '.ts', '.ios.tsx', '.android.tsx', '.tsx', '.js', '.jsx', '.json'],
         },

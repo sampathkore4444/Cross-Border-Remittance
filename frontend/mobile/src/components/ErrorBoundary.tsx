@@ -21,7 +21,7 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     analytics.trackError(error);
-    analytics.trackEvent('error', { message: error.message, stack: info.componentStack });
+    analytics.trackEvent('error', { message: error.message || 'unknown', stack: info.componentStack || '' });
   }
 
   handleReset = () => {

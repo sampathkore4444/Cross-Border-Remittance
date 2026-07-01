@@ -10,7 +10,7 @@ import { Loading } from '@components/Loading';
 import { useToast } from '@components/Toast';
 import { api } from '@services/api';
 import { validateName, validatePhone, normalizePhone } from '@utils/validation';
-import type { Recipient } from '@types/api';
+import type { Recipient } from '@app-types/api';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { SendStackParamList } from '@navigation/types';
 
@@ -34,7 +34,7 @@ export default function RecipientScreen({ route, navigation }: Props) {
   }, [showToast, t]);
 
   const selectRecipient = (r: Recipient) => {
-    navigation.navigate('PayoutMethod', { quote: quote!, recipient: r, payoutMethod: 'bcel_cash', paymentMethod: 'promptpay_qr' });
+    navigation.navigate('PayoutMethod', { quote: quote!, recipient: r });
   };
 
   const handleNew = async () => {

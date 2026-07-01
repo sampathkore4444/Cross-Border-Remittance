@@ -8,7 +8,7 @@ import { Button } from '@components/Button';
 import { Loading } from '@components/Loading';
 import { api } from '@services/api';
 import { useToast } from '@components/Toast';
-import type { Transaction, AutosendConfig } from '@types/api';
+import type { Transaction, AutosendConfig } from '@app-types/api';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainTabParamList } from '@navigation/types';
 

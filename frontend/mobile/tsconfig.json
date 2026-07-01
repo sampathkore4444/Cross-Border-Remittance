@@ -12,7 +12,7 @@
       "@constants/*": ["src/constants/*"],
       "@i18n/*": ["src/i18n/*"],
       "@utils/*": ["src/utils/*"],
-      "@types/*": ["src/types/*"],
+      "@app-types/*": ["src/types/*"],
       "@navigation/*": ["src/navigation/*"]
     }
   }

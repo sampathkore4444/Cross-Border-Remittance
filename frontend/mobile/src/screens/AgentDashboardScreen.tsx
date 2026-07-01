@@ -8,6 +8,7 @@ import { Header } from '@components/Header';
 import { Loading } from '@components/Loading';
 import { useToast } from '@components/Toast';
 import { useBiometric } from '@hooks/useBiometric';
+import { useFloatAlert } from '@hooks/useFloatAlert';
 import { api } from '@services/api';
 import QRScannerScreen from './QRScannerScreen';
 import RecipientPhotoCapture from './RecipientPhotoCapture';
@@ -42,6 +43,8 @@ export default function AgentDashboardScreen({ navigation }: any) {
   useEffect(() => {
     loadAll();
   }, []);
+
+  useFloatAlert(agent?.float_balance_lak || 0, agent?.float_minimum || 1000000);
 
   const loadAll = async () => {
     setLoading(true);
@@ -112,14 +115,14 @@ export default function AgentDashboardScreen({ navigation }: any) {
   };
 
   const buildConfirmData = () => {
-    const amt = opType === 'cash_in' ? parseFloat(amount) : parseInt(amount, 10);
+    const amt = confirmOp === 'cash_in' ? parseFloat(amount) : parseInt(amount, 10);
     if (!amt || amt <= 0) {
       Alert.alert('Invalid Amount', 'Please enter a valid amount');
       return null;
     }
     const rate = agent?.exchange_rate || 575;
     const fee = Math.round(amt * 0.005);
-    const total = opType === 'cash_in' ? amt - fee : amt + fee;
+    const total = confirmOp === 'cash_in' ? amt - fee : amt + fee;
     return { amt, rate, fee, total };
   };
 
@@ -175,8 +178,6 @@ export default function AgentDashboardScreen({ navigation }: any) {
       || (tx.reference || '').toLowerCase().includes(q)
       || (tx.type || '').toLowerCase().includes(q);
   });
-
-  const opType = confirmOp;
 
   if (loading) return <Loading fullScreen message="Loading dashboard..." />;
 

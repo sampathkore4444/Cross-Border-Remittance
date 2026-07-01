@@ -38,6 +38,7 @@ type Store interface {
 	ListAgentTransactions(ctx context.Context, agentID string, limit int) ([]core.FloatTransaction, error)
 	GetFloatBalance(ctx context.Context, agentID string) (int64, error)
 	UpdateAgentStatus(ctx context.Context, id string, isActive bool) error
+	UpdateCommission(ctx context.Context, agentID string, amount int64) error
 
 	GetDailyVolume(ctx context.Context, date string) (totalTHB float64, totalLAK int64, err error)
 	SaveReconciliation(ctx context.Context, r *core.TreasuryReconciliation) error
