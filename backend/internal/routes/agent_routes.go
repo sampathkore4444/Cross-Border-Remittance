@@ -3,6 +3,7 @@ package routes
 import (
 	"context"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ngoensai/backend/internal/common/middleware"
@@ -15,6 +16,8 @@ type AgentService interface {
 	ProcessCashOut(ctx context.Context, agentID string, amountLAK int64, recipientPhone string) (string, error)
 	DepositFloat(ctx context.Context, agentID string, amount int64, method string) error
 	GetAgent(ctx context.Context, id string) (*core.Agent, error)
+	GetAgentByUserID(ctx context.Context, userID string) (*core.Agent, error)
+	ListAgentTransactions(ctx context.Context, agentID string, limit int) ([]core.FloatTransaction, error)
 }
 
 type AgentAuthService interface {
@@ -41,6 +44,8 @@ func RegisterAgent(r *gin.Engine, agentSvc AgentService, authSvc AgentAuthServic
 			user := c.MustGet("user").(*core.User)
 			agent := &core.Agent{
 				UserID:       user.ID,
+				Name:         user.Name,
+				Phone:        user.Phone,
 				ShopName:     req.ShopName,
 				ShopAddress:  req.ShopAddress,
 				ShopProvince: req.ShopProvince,
@@ -54,6 +59,48 @@ func RegisterAgent(r *gin.Engine, agentSvc AgentService, authSvc AgentAuthServic
 				return
 			}
 			c.JSON(http.StatusOK, gin.H{"status": "registered", "agent_id": agent.ID})
+		})
+
+		g.GET("/me", func(c *gin.Context) {
+			user := c.MustGet("user").(*core.User)
+			agent, err := agentSvc.GetAgentByUserID(c.Request.Context(), user.ID)
+			if err != nil {
+				c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+				return
+			}
+			c.JSON(http.StatusOK, agent)
+		})
+
+		g.GET("/transactions", func(c *gin.Context) {
+			user := c.MustGet("user").(*core.User)
+			agent, err := agentSvc.GetAgentByUserID(c.Request.Context(), user.ID)
+			if err != nil {
+				c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+				return
+			}
+			limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
+			if limit < 1 || limit > 200 {
+				limit = 50
+			}
+			txns, err := agentSvc.ListAgentTransactions(c.Request.Context(), agent.ID, limit)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{"transactions": txns})
+		})
+
+		g.GET("/commission", func(c *gin.Context) {
+			user := c.MustGet("user").(*core.User)
+			agent, err := agentSvc.GetAgentByUserID(c.Request.Context(), user.ID)
+			if err != nil {
+				c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{
+				"commission_rate":  agent.CommissionRate,
+				"commission_total": agent.CommissionTotal,
+			})
 		})
 
 		g.POST("/cash-in", func(c *gin.Context) {

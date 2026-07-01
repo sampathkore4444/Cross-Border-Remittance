@@ -80,6 +80,11 @@ export default function ProfileScreen({ navigation }: any) {
             <Text style={styles.menuArrow}>→</Text>
           </TouchableOpacity>
           <View style={styles.divider} />
+          <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('AgentRegistration')}>
+            <Text style={[styles.menuText, { color: Colors.secondary }]}>Register as Agent</Text>
+            <Text style={[styles.menuArrow, { color: Colors.secondary }]}>+</Text>
+          </TouchableOpacity>
+          <View style={styles.divider} />
           <TouchableOpacity style={styles.menuItem} onPress={openSupportChat}>
             <Text style={styles.menuText}>{t('profile.support')}</Text>
             <Text style={styles.menuArrow}>→</Text>

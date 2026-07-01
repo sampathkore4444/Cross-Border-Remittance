@@ -27,6 +27,7 @@ export type RootStackParamList = {
   Send: undefined;
   TransactionDetail: { ref: string };
   AgentDashboard: undefined;
+  AgentRegistration: undefined;
   AutosendSettings: undefined;
   QRScanner: { transactionRef: string };
   PhotoCapture: { transactionRef: string };
@@ -47,6 +48,7 @@ export const linking = {
   config: {
     screens: {
       TransactionDetail: 'transaction/:ref',
+      AgentRegistration: 'agent/register',
       Main: {
         screens: {
           Home: 'home',

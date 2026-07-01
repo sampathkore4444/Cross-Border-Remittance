@@ -385,6 +385,25 @@ func (p *RealPostgres) UpdateAgentStatus(ctx context.Context, id string, isActiv
 	return p.exec(ctx, `UPDATE agents SET is_active=$1, updated_at=NOW() WHERE id=$2`, isActive, id)
 }
 
+func (p *RealPostgres) ListAgentTransactions(ctx context.Context, agentID string, limit int) ([]core.FloatTransaction, error) {
+	rows, err := p.db.QueryContext(ctx,
+		`SELECT id, agent_id, type, amount, balance_before, balance_after, reference, method, status, created_at
+		 FROM float_transactions WHERE agent_id=$1 ORDER BY created_at DESC LIMIT $2`, agentID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var result []core.FloatTransaction
+	for rows.Next() {
+		var ft core.FloatTransaction
+		if err := rows.Scan(&ft.ID, &ft.AgentID, &ft.Type, &ft.Amount, &ft.BalanceBefore, &ft.BalanceAfter, &ft.Reference, &ft.Method, &ft.Status, &ft.CreatedAt); err != nil {
+			return nil, err
+		}
+		result = append(result, ft)
+	}
+	return result, nil
+}
+
 func (p *RealPostgres) AddFloatTransaction(ctx context.Context, tx *core.FloatTransaction) error {
 	return p.exec(ctx,
 		`INSERT INTO float_transactions (id, agent_id, type, amount, reference, created_at)

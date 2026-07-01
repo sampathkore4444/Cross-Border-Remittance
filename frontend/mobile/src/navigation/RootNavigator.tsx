@@ -8,6 +8,7 @@ import { MainTabNavigator } from './MainTabNavigator';
 import { SendNavigator } from './SendNavigator';
 import TransactionDetailScreen from '@screens/TransactionDetailScreen';
 import AgentDashboardScreen from '@screens/AgentDashboardScreen';
+import AgentRegistrationScreen from '@screens/AgentRegistrationScreen';
 import AutosendSettingsScreen from '@screens/AutosendSettingsScreen';
 import QRScannerScreen from '@screens/QRScannerScreen';
 import RecipientPhotoCapture from '@screens/RecipientPhotoCapture';
@@ -79,6 +80,7 @@ export function RootNavigator() {
           <Stack.Screen name="Send" component={SendNavigator} />
           <Stack.Screen name="TransactionDetail" component={TransactionDetailScreen} />
           <Stack.Screen name="AgentDashboard" component={AgentDashboardScreen} />
+          <Stack.Screen name="AgentRegistration" component={AgentRegistrationScreen} />
           <Stack.Screen name="AutosendSettings" component={AutosendSettingsScreen} />
           <Stack.Screen name="QRScanner" component={QRScannerScreen} />
           <Stack.Screen name="PhotoCapture" component={RecipientPhotoCapture} />

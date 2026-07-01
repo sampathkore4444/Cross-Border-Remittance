@@ -35,6 +35,7 @@ type Store interface {
 	ListAgents(ctx context.Context, country string, page, limit int) ([]core.Agent, int, error)
 	UpdateFloat(ctx context.Context, agentID string, amount int64) error
 	AddFloatTransaction(ctx context.Context, tx *core.FloatTransaction) error
+	ListAgentTransactions(ctx context.Context, agentID string, limit int) ([]core.FloatTransaction, error)
 	GetFloatBalance(ctx context.Context, agentID string) (int64, error)
 	UpdateAgentStatus(ctx context.Context, id string, isActive bool) error
 

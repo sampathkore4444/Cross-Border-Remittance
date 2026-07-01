@@ -220,6 +220,26 @@ class ApiService {
     await this.client.post('/recipients', data);
   }
 
+  // Agent
+  async registerAgent(data: {
+    shop_name: string; shop_address?: string; shop_province: string;
+    shop_lat?: number; shop_lng?: number; country: string; agent_type: string;
+  }): Promise<{ agent_id: string }> {
+    if (this._demoMode) return { agent_id: 'demo-agent-001' };
+    const res = await this.client.post('/agents/register', data);
+    return res.data;
+  }
+
+  async getAgentCommission(): Promise<{ commission_rate: number; commission_total: number }> {
+    const res = await this.client.get('/agents/commission');
+    return res.data;
+  }
+
+  async depositFloat(agentId: string, amount: number, method: string): Promise<void> {
+    if (this._demoMode) return;
+    await this.client.post('/agents/float/deposit', { agent_id: agentId, amount, method });
+  }
+
   async getTransaction(ref: string): Promise<Transaction> {
     if (this._demoMode) {
       return { transaction_ref: ref, source_amount: 5000, source_currency: 'THB', target_amount: 6250, target_currency: 'LAK', exchange_rate: 1.25, recipient_name: 'Souliphone Chanthavong', recipient_phone: '856209876543', status: 'completed', created_at: new Date(Date.now() - 86400000).toISOString(), paid_at: new Date(Date.now() - 82800000).toISOString(), completed_at: new Date(Date.now() - 81000000).toISOString(), picked_up_at: new Date(Date.now() - 80000000).toISOString(), pickup_code: 'LAO-8421' };

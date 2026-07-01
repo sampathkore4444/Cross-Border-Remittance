@@ -15,6 +15,7 @@ type Repository interface {
 	GetAgent(ctx context.Context, id string) (*core.Agent, error)
 	GetAgentByUserID(ctx context.Context, userID string) (*core.Agent, error)
 	ListAgents(ctx context.Context, country string, page, limit int) ([]core.Agent, int, error)
+	ListAgentTransactions(ctx context.Context, agentID string, limit int) ([]core.FloatTransaction, error)
 	UpdateFloat(ctx context.Context, agentID string, amount int64) error
 	AddFloatTransaction(ctx context.Context, tx *core.FloatTransaction) error
 	GetFloatBalance(ctx context.Context, agentID string) (int64, error)
@@ -82,6 +83,14 @@ func (s *Service) ProcessCashOut(ctx context.Context, agentID string, amountLAK 
 
 func (s *Service) GetAgent(ctx context.Context, id string) (*core.Agent, error) {
 	return s.repo.GetAgent(ctx, id)
+}
+
+func (s *Service) GetAgentByUserID(ctx context.Context, userID string) (*core.Agent, error) {
+	return s.repo.GetAgentByUserID(ctx, userID)
+}
+
+func (s *Service) ListAgentTransactions(ctx context.Context, agentID string, limit int) ([]core.FloatTransaction, error) {
+	return s.repo.ListAgentTransactions(ctx, agentID, limit)
 }
 
 func (s *Service) DepositFloat(ctx context.Context, agentID string, amount int64, method string) error {

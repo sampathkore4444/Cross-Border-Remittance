@@ -407,6 +407,21 @@ func (p *Postgres) UpdateAgentStatus(ctx context.Context, id string, isActive bo
 	return nil
 }
 
+func (p *Postgres) ListAgentTransactions(ctx context.Context, agentID string, limit int) ([]core.FloatTransaction, error) {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	var result []core.FloatTransaction
+	for _, ft := range p.floatTxns {
+		if ft.AgentID == agentID {
+			result = append(result, ft)
+		}
+	}
+	if len(result) > limit {
+		result = result[:limit]
+	}
+	return result, nil
+}
+
 func (p *Postgres) AddFloatTransaction(ctx context.Context, tx *core.FloatTransaction) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
